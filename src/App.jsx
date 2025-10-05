@@ -5,6 +5,7 @@ import PetDetail from './pages/PetDetail.jsx'
 import VideoDetail from './pages/VideoDetail.jsx'
 import Events from './pages/Events.jsx'
 import EventDetail from './pages/EventDetail.jsx'
+import Login from './pages/Login.jsx'
 import Adopt from './pages/Adopt.jsx'
 import Training from './pages/Training.jsx'
 
@@ -58,10 +59,10 @@ export default function App() {
               Mağaza
             </Link>
           </nav>
-          <div className="actions">
-            <a className="link" href="#">Giriş</a>
-            <button className="avatar" aria-label="Profil"></button>
-          </div>
+              <div className="actions">
+                <Link className="link" to="/login">Giriş</Link>
+                <button className="avatar" aria-label="Profil"></button>
+              </div>
         </div>
       </header>
           <Routes>
@@ -73,6 +74,7 @@ export default function App() {
             <Route path="/training" element={<Training />} />
             <Route path="/events" element={<Events />} />
             <Route path="/events/:id" element={<EventDetail />} />
+            <Route path="/login" element={<Login />} />
           </Routes>
 
       <footer className="site-footer">

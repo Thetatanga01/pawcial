@@ -88,31 +88,19 @@ export default function Pets() {
         <p className="section-lead">Sıcak bir yuva bekleyen sevgi dolu patili dostlar dünyasını keşfedin. Sahiplendirme sürecinizde baştan sona yanınızdayız.</p>
 
         {/* Filters */}
-        <div className="events-filters" style={{ marginBottom: '1.5rem' }}>
+        <div className="events-filters">
           <div className="filter-container">
-            <select
-              id="breed-select"
-              className="filter-select"
-              value={breed}
-              onChange={(e) => setBreed(e.target.value)}
-            >
-              {breedOptions.map((o) => <option key={o} value={o}>{o}</option>)}
+            <select value={breed} onChange={(e) => setBreed(e.target.value)} className="filter-select">
+              <option value="Tümü">Cins</option>
+              {breedOptions.slice(1).map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
-            <select
-              id="gender-select"
-              className="filter-select"
-              value={gender}
-              onChange={(e) => setGender(e.target.value)}
-            >
-              {genderOptions.map((o) => <option key={o} value={o}>{o}</option>)}
+            <select value={gender} onChange={(e) => setGender(e.target.value)} className="filter-select">
+              <option value="Tümü">Cinsiyet</option>
+              {genderOptions.slice(1).map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
-            <select
-              id="age-select"
-              className="filter-select"
-              value={age}
-              onChange={(e) => setAge(e.target.value)}
-            >
-              {ageOptions.map((o) => <option key={o} value={o}>{o}</option>)}
+            <select value={age} onChange={(e) => setAge(e.target.value)} className="filter-select">
+              <option value="Tümü">Yaş</option>
+              {ageOptions.slice(1).map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
           </div>
         </div>
