@@ -105,3 +105,4 @@ export async function addEventComment(eventId, text, rating) {
   return newComment;
 }
 
+
