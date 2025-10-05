@@ -120,8 +120,8 @@ export default function Events() {
   return (
     <main className="section">
       <div className="container">
-        <h1 className="events-title">Pawcial Etkinlikleri</h1>
-        <p className="events-subtitle">
+        <h1 className="section-title">Pawcial Etkinlikleri</h1>
+        <p className="section-lead">
           Evcil hayvan severler ve tüylü dostları için topluluk etkinliklerimize katılın. Rehberli köpek yürüyüşlerinden evcil hayvan temalı atölyelere kadar herkes için bir şeyler var.
         </p>
         

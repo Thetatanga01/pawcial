@@ -65,16 +65,6 @@ export default function Pets() {
               <div key={i} className="pet-card" style={{ background: '#f5f5f5', height: '200px' }} />
             ))}
           </div>
-          <div className="card-row">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="pet-card" style={{ background: '#f5f5f5', height: '200px' }} />
-            ))}
-          </div>
-          <div className="card-row">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="pet-card" style={{ background: '#f5f5f5', height: '200px' }} />
-            ))}
-          </div>
         </div>
       </main>
     )
@@ -99,21 +89,29 @@ export default function Pets() {
 
         {/* Filters */}
         <div className="events-filters" style={{ marginBottom: '1.5rem' }}>
-          <div className="filter-group">
-            <label htmlFor="breed-select">Cins</label>
-            <select id="breed-select" value={breed} onChange={(e) => setBreed(e.target.value)}>
+          <div className="filter-container">
+            <select
+              id="breed-select"
+              className="filter-select"
+              value={breed}
+              onChange={(e) => setBreed(e.target.value)}
+            >
               {breedOptions.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
-          </div>
-          <div className="filter-group">
-            <label htmlFor="gender-select">Cinsiyet</label>
-            <select id="gender-select" value={gender} onChange={(e) => setGender(e.target.value)}>
+            <select
+              id="gender-select"
+              className="filter-select"
+              value={gender}
+              onChange={(e) => setGender(e.target.value)}
+            >
               {genderOptions.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
-          </div>
-          <div className="filter-group">
-            <label htmlFor="age-select">Yaş</label>
-            <select id="age-select" value={age} onChange={(e) => setAge(e.target.value)}>
+            <select
+              id="age-select"
+              className="filter-select"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+            >
               {ageOptions.map((o) => <option key={o} value={o}>{o}</option>)}
             </select>
           </div>

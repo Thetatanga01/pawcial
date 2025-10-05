@@ -1,5 +1,6 @@
 /* Global styles and fonts */
-@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+/* Use display=block to avoid FOUT/FOIT swap on first paint */
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=block&subset=latin-ext');
 :root { --brand: #ff6f43; --brand-600: #ff5a26; --ink: #1f2428; --ink-soft: #4b5563; --bg: #fff8f5; --card: #ffffff; --stroke: #efe2db; --alt: #fdeee7; --shadow: 0 10px 24px rgba(31, 36, 40, 0.06); --radius: 16px; }
 html { box-sizing: border-box; } *, *::before, *::after { box-sizing: inherit; }
 body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color: var(--ink); background: #fff; }
@@ -150,6 +151,29 @@ body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto
 .pagination-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 .pagination-info { font-size: 14px; color: var(--ink-soft); }
 
+/* Trainings Grid */
+.trainings-layout { display: grid; grid-template-columns: 260px 1fr; gap: 1.5rem; }
+.trainings-sidebar { background: var(--card); border: 1px solid var(--stroke); border-radius: var(--radius); padding: 1rem; box-shadow: var(--shadow); height: fit-content; position: sticky; top: 84px; }
+.tree-menu { display: block; }
+.tree-group { margin-bottom: 1rem; display: flex; flex-direction: column; gap: 8px; }
+.tree-link { text-align: left; background: none; border: none; padding: 8px 10px; border-radius: 8px; cursor: pointer; color: var(--ink); }
+.tree-link.active { background: var(--bg); color: var(--brand); font-weight: 600; }
+.tree-heading { margin: 12px 2px 6px; font-weight: 700; color: var(--ink); }
+.tree-list { list-style: none; padding: 0 0 0 16px; margin: 0 0 10px; }
+.tree-item { background: none; border: none; padding: 6px 0; cursor: pointer; color: var(--ink-soft); text-align: left; }
+.tree-item.active { color: var(--brand); font-weight: 600; }
+.trainings-content { min-height: 300px; }
+.trainings-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+@media (max-width: 1024px) { .trainings-layout { grid-template-columns: 1fr; } .trainings-grid-3 { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .trainings-grid-3 { grid-template-columns: 1fr; } }
+
+/* Training card */
+.training-card { position: relative; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); border: 1px solid var(--stroke); background: var(--card); }
+.training-card img { width: 100%; height: 220px; object-fit: cover; display: block; }
+.training-meta { padding: 10px 12px; }
+.training-instructor { margin: 0 0 4px; font-size: 16px; font-weight: 600; color: var(--ink); text-decoration: none; }
+.training-title { margin: 0; font-size: 13px; color: var(--ink-soft); text-decoration: none; }
+
 /* Event Detail Page Styles */
 .event-detail-header { 
   text-align: center; 
@@ -224,6 +248,12 @@ body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto
 .comment-actions { display: flex; gap: 1rem; }
 .comment-action-btn { background: none; border: none; color: var(--ink-soft); cursor: pointer; font-size: 0.9rem; padding: 4px 8px; border-radius: 4px; transition: background 0.2s ease; }
 .comment-action-btn:hover { background: var(--bg); }
+
+/* Simple form grid for pages like Adopt */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.form-field { display: flex; flex-direction: column; gap: 6px; }
+.form-field label { font-weight: 600; font-size: 14px; color: var(--ink); }
+@media (max-width: 640px) { .form-grid { grid-template-columns: 1fr; } }
 
 /* Event Gallery Styles */
 .event-gallery { margin-top: 1rem; }

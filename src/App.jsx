@@ -5,6 +5,8 @@ import PetDetail from './pages/PetDetail.jsx'
 import VideoDetail from './pages/VideoDetail.jsx'
 import Events from './pages/Events.jsx'
 import EventDetail from './pages/EventDetail.jsx'
+import Adopt from './pages/Adopt.jsx'
+import Training from './pages/Training.jsx'
 
 export default function App() {
   const currentYear = new Date().getFullYear();
@@ -32,7 +34,7 @@ export default function App() {
               Sahiplendirme
             </Link>
             <Link 
-              to="/#egitim" 
+              to="/training" 
               className={isActive('/training') ? 'active' : ''}
             >
               Eğitim
@@ -67,6 +69,8 @@ export default function App() {
             <Route path="/pets" element={<Pets />} />
             <Route path="/pets/:id" element={<PetDetail />} />
             <Route path="/videos/:id" element={<VideoDetail />} />
+            <Route path="/adopt/:id" element={<Adopt />} />
+            <Route path="/training" element={<Training />} />
             <Route path="/events" element={<Events />} />
             <Route path="/events/:id" element={<EventDetail />} />
           </Routes>

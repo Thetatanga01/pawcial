@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { fetchPetById } from '../api/pets.js'
 
 export default function PetDetail() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [pet, setPet] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -67,7 +68,7 @@ export default function PetDetail() {
     <main className="section">
       <div className="container">
         <div className="pet-detail-back">
-          <Link className="btn btn-soft" to="/pets">← Geri</Link>
+          <Link className="btn btn-soft" to="/pets">Geri</Link>
         </div>
         
         <div className="pet-detail-grid">
@@ -160,7 +161,7 @@ export default function PetDetail() {
 
             <div className="pet-detail-actions">
               <div className="pet-action-buttons">
-                <button className="btn btn-primary pet-action-btn">Yuva Ol</button>
+                <button className="btn btn-primary pet-action-btn" onClick={() => navigate(`/adopt/${pet.id}`)}>Yuva Ol</button>
                 <button className="btn btn-secondary pet-action-btn">Geçici Yuva Ol</button>
                 <button className="btn btn-tertiary pet-action-btn">Koruyucu Aile Ol</button>
               </div>
