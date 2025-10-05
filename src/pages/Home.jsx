@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchFeaturedPets } from '../api/pets.js'
 import { fetchTrainingVideos } from '../api/videos.js'
+import HowToHelp from '../components/HowToHelp.jsx'
+import SocialEventsSlider from '../components/SocialEventsSlider.jsx'
 
 export default function Home() {
   const [pets, setPets] = useState([])
@@ -27,8 +29,8 @@ export default function Home() {
       <section className="hero">
         <div className="container hero-inner">
           <h1 className="hero-title">Mükemmel Dostunu Bul</h1>
-          <p className="hero-subtitle">Sıcak bir yuva bekleyen sevgi dolu patili dostlar dünyasını keşfedin. Sahiplendirme sürecinizde baştan sona yanınızdayız.</p>
-          <a className="btn btn-primary" href="#sahiplendirme">Bir Evcil Hayvan Sahiplen</a>
+          <p className="hero-subtitle">Sıcak bir yuva bekleyen sevgi dolu patili dostlar dünyasını keşfedin. Sahiplendirme sürecinizde -ve hatta sonrasında bile- daima yanınızdayız.</p>
+          <Link className="btn btn-primary" to="/pets">O'nun Kahramanı Ol</Link>
         </div>
       </section>
 
@@ -50,17 +52,22 @@ export default function Home() {
           )}
           {error && <p style={{ textAlign: 'center', color: '#b00020' }}>{error}</p>}
           {!loading && !error && (
-            <div className="card-row">
-              {pets.map((pet) => (
-                <Link to={`/pets/${encodeURIComponent(pet.name.toLowerCase())}`} className="pet-card link-reset" key={pet.name}>
-                  <img src={pet.thumbnailUrl} alt={`${pet.name} adlı hayvan`} />
-                  <div className="pet-meta">
-                    <h3>{pet.name}</h3>
-                    <p>{pet.description}</p>
-                  </div>
-                </Link>
-              ))}
-            </div>
+            <>
+              <div className="card-row">
+                {pets.map((pet) => (
+                  <Link to={`/pets/${pet.id}`} className="pet-card link-reset" key={pet.id}>
+                    <img src={pet.thumbnailUrl} alt={`${pet.name} adlı hayvan`} />
+                    <div className="pet-meta">
+                      <h3>{pet.name}</h3>
+                      <p>{pet.description}</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+              <div style={{ textAlign: 'center', marginTop: '2rem' }}>
+                <Link className="btn btn-primary" to="/pets">Tüm Hayvanları Gör</Link>
+              </div>
+            </>
           )}
         </div>
       </section>
@@ -95,12 +102,9 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="section section-alt split">
-        <div className="container split-grid">
-          <div className="split-media"><img src="https://images.unsplash.com/photo-1544006659-f0b21884ce1d?q=80&w=900&auto=format&fit=crop" alt="Eğitmen portresi" /></div>
-          <div className="split-content"><h3>Eğitmen Eşliğinde Köpeklerle Yürüyüş Etkinlikleri</h3><p>Uzman eğitmenlerle sosyalleşme ve egzersiz dolu yürüyüşlere katılın.</p><a className="btn btn-primary" href="#">Etkinliklere Göz At</a></div>
-        </div>
-      </section>
+      <HowToHelp />
+
+      <SocialEventsSlider />
 
       <section id="magaza" className="section split">
         <div className="container split-grid reverse">
