@@ -8,6 +8,7 @@ import EventDetail from './pages/EventDetail.jsx'
 import Login from './pages/Login.jsx'
 import Adopt from './pages/Adopt.jsx'
 import Training from './pages/Training.jsx'
+import Admin from './pages/Admin.jsx'
 
 export default function App() {
   const currentYear = new Date().getFullYear();
@@ -19,9 +20,12 @@ export default function App() {
     return location.pathname.startsWith(path);
   };
 
+  // Check if we're on admin page to hide header/footer
+  const isAdminPage = location.pathname.startsWith('/admin');
+
   return (
     <>
-      <header className="site-header">
+      {!isAdminPage && <header className="site-header">
         <div className="container header-inner">
           <Link to="/" className="brand">
             <span className="logo-dot"></span>
@@ -64,7 +68,7 @@ export default function App() {
                 <button className="avatar" aria-label="Profil"></button>
               </div>
         </div>
-      </header>
+      </header>}
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/pets" element={<Pets />} />
@@ -75,9 +79,10 @@ export default function App() {
             <Route path="/events" element={<Events />} />
             <Route path="/events/:id" element={<EventDetail />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/admin" element={<Admin />} />
           </Routes>
 
-      <footer className="site-footer">
+      {!isAdminPage && <footer className="site-footer">
         <div className="container footer-inner">
               <div className="footer-left">
                 <Link to="/" className="brand"><span className="logo-dot"></span><span className="brand-name">Pawcial</span></Link>
@@ -85,7 +90,7 @@ export default function App() {
               </div>
           <nav className="footer-nav"><a href="#">Hakkımızda</a><a href="#">Gizlilik Politikası</a><a href="#">Hizmet Şartları</a></nav>
         </div>
-      </footer>
+      </footer>}
     </>
   );
 }
