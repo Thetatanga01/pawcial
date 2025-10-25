@@ -45,82 +45,91 @@ data class CreateDomesticStatusRequest(
 
 ## Backend API Endpoint'leri
 
-Frontend kodu aşağıdaki endpoint yapısını beklemektedir:
+Backend **GERÇEK** endpoint yapısı:
 
 ### 1. Liste Getir (GET)
 ```
-GET /api/{dictionary-type}
+GET /api/{dictionary-types}  ← plural (çoğul)
 Response: Array<DictionaryItem>
 ```
 
 **Örnek:**
 ```
-GET /api/domestic-status
+GET /api/domestic-statuses
 Response: [
-  { "id": 1, "code": "DOMESTIC", "label": "Evcil" },
-  { "id": 2, "code": "WILD", "label": "Yabani" }
+  { "code": "DOMESTICATED", "label": "Evcil" },
+  { "code": "WILD", "label": "Yabani" }
 ]
 ```
 
+**NOT:** Response'da `id` alanı YOK. Code alanı unique identifier olarak kullanılıyor.
+
 ### 2. Yeni Kayıt Ekle (POST)
 ```
-POST /api/{dictionary-type}
+POST /api/{dictionary-types}
 Content-Type: application/json
 Body: {
   "code": "DOMESTIC",
   "label": "Evcil"
 }
-Response: DictionaryItem (created item with id)
+Response: 204 No Content (veya created item)
 ```
 
-### 3. Kayıt Güncelle (PUT)
+### 3. Kayıt Güncelle (PUT) - ✅ YENİ!
 ```
-PUT /api/{dictionary-type}/{id}
+PUT /api/{dictionary-types}/{code}
 Content-Type: application/json
 Body: {
-  "code": "DOMESTIC",
-  "label": "Evcil"
+  "label": "Yeni Etiket"
 }
-Response: DictionaryItem (updated item)
+Response: 200 OK
+{
+  "code": "WHITE",
+  "label": "Yeni Etiket"
+}
 ```
 
-### 4. Kayıt Sil (DELETE)
+**NOT:** Sadece **label** güncellenebilir. Code immutable (değiştirilemez).
+
+### 4. Toggle - Aktif/Pasif (PATCH)
 ```
-DELETE /api/{dictionary-type}/{id}
+PATCH /api/{dictionary-types}/{code}/toggle
 Response: 204 No Content
 ```
+
+**NOT:** Toggle işlemi soft delete yapıyor - GET sadece aktif kayıtları döndürüyor.
 
 ## Dictionary Type URL Mapping
 
 Frontend'de kullanılan ID'ler ile backend endpoint'leri:
 
-| Frontend ID | Backend Endpoint | Description |
-|------------|------------------|-------------|
-| `asset-status` | `/api/asset-status` | Varlık Durumu |
-| `asset-type` | `/api/asset-type` | Varlık Tipi |
-| `color` | `/api/color` | Renk |
-| `domestic-status` | `/api/domestic-status` | Evcillik Durumu |
-| `dose-route` | `/api/dose-route` | Doz Yolu |
-| `event-type` | `/api/event-type` | Etkinlik Tipi |
-| `facility-type` | `/api/facility-type` | Tesis Tipi |
-| `health-flag` | `/api/health-flag` | Sağlık Durumu |
-| `hold-type` | `/api/hold-type` | Bekleme Tipi |
-| `med-event-type` | `/api/med-event-type` | Tıbbi Olay Tipi |
-| `observation-category` | `/api/observation-category` | Gözlem Kategorisi |
-| `outcome-type` | `/api/outcome-type` | Sonuç Tipi |
-| `placement-status` | `/api/placement-status` | Yerleştirme Durumu |
-| `placement-type` | `/api/placement-type` | Yerleştirme Tipi |
-| `service-type` | `/api/service-type` | Hizmet Tipi |
-| `sex` | `/api/sex` | Cinsiyet |
-| `size` | `/api/size` | Boyut |
-| `source-type` | `/api/source-type` | Kaynak Tipi |
-| `temperament` | `/api/temperament` | Mizaç |
-| `training-level` | `/api/training-level` | Eğitim Seviyesi |
-| `unit-type` | `/api/unit-type` | Birim Tipi |
-| `vaccine` | `/api/vaccine` | Aşı |
-| `volunteer-area` | `/api/volunteer-area-dictionary` | Gönüllü Bölgesi |
-| `volunteer-status` | `/api/volunteer-status` | Gönüllü Durumu |
-| `zone-purpose` | `/api/zone-purpose` | Bölge Amacı |
+| Frontend ID | Backend Endpoint (Plural) | Description |
+|------------|---------------------------|-------------|
+| `asset-status` | `/api/asset-statuses` | Varlık Durumu |
+| `asset-type` | `/api/asset-types` | Varlık Tipi |
+| `color` | `/api/colors` | Renk |
+| `domestic-status` | `/api/domestic-statuses` | Evcillik Durumu |
+| `dose-route` | `/api/dose-routes` | Doz Yolu |
+| `event-type` | `/api/event-types` | Etkinlik Tipi |
+| `facility-type` | `/api/facility-types` | Tesis Tipi |
+| `health-flag` | `/api/health-flags` | Sağlık Durumu |
+| `hold-type` | `/api/hold-types` | Bekleme Tipi |
+| `med-event-type` | `/api/med-event-types` | Tıbbi Olay Tipi |
+| `observation-category` | `/api/observation-categories` | Gözlem Kategorisi |
+| `outcome-type` | `/api/outcome-types` | Sonuç Tipi |
+| `placement-status` | `/api/placement-statuses` | Yerleştirme Durumu |
+| `placement-type` | `/api/placement-types` | Yerleştirme Tipi |
+| `service-type` | `/api/service-types` | Hizmet Tipi |
+| `sex` | `/api/sexes` | Cinsiyet |
+| `size` | `/api/sizes` | Boyut |
+| `source-type` | `/api/source-types` | Kaynak Tipi |
+| `temperament` | `/api/temperaments` | Mizaç |
+| `training-level` | `/api/training-levels` | Eğitim Seviyesi |
+| `unit-type` | `/api/unit-types` | Birim Tipi |
+| `vaccine` | `/api/vaccines` | Aşı |
+| `volunteer-area` | `/api/volunteer-area-dictionaries` | Gönüllü Bölgesi |
+| `volunteer-status` | `/api/volunteer-statuses` | Gönüllü Durumu |
+| `zone-purpose` | `/api/zone-purposes` | Bölge Amacı |
 
 ## Kod Dosyaları
 
@@ -131,10 +140,11 @@ Frontend'de kullanılan ID'ler ile backend endpoint'leri:
 
 ### Backend Entegrasyonu Gereken İşlemler
 
-1. **CORS Ayarları:** Backend'de `http://localhost:5173` origin'ine izin verilmeli
-2. **Endpoint'ler:** Yukarıdaki tabloda belirtilen tüm endpoint'ler oluşturulmalı
-3. **Response Format:** JSON formatında dönen response'lar `id`, `code`, `label` alanlarını içermeli
-4. **Error Handling:** HTTP status kodları doğru şekilde kullanılmalı (200, 201, 204, 400, 404, 500)
+1. **CORS Ayarları:** Backend'de `http://localhost:5173` origin'ine izin verilmeli ✅
+2. **Endpoint'ler:** Yukarıdaki tabloda belirtilen tüm endpoint'ler mevcut ✅
+3. **Response Format:** JSON formatında sadece `code` ve `label` alanları var (`id` YOK) ✅
+4. **Error Handling:** HTTP status kodları doğru şekilde kullanılmalı (200, 204, 400, 404, 500) ✅
+5. **Soft Delete:** Toggle endpoint'i ile soft delete pattern implement edilmiş ✅
 
 ## Kullanım
 
@@ -142,10 +152,10 @@ Frontend'de kullanılan ID'ler ile backend endpoint'leri:
 2. Sol menüden "Sözlük Tabloları" seçeneğine tıklayın
 3. 25 dictionary'den birini seçin
 4. CRUD işlemlerini gerçekleştirin:
-   - **Create:** "+ Yeni Ekle" butonu
-   - **Read:** Tablo otomatik olarak yüklenir
-   - **Update:** Satırdaki ✏️ butonuna tıklayın
-   - **Delete:** Satırdaki 🗑️ butonuna tıklayın
+   - **Create:** "+ Yeni Ekle" butonu ile yeni kayıt ekleyin
+   - **Read:** Tablo otomatik olarak yüklenir (sadece aktif kayıtlar)
+   - **Update:** ✏️ butonuna tıklayarak label'ı düzenleyin ✅ (Kod değiştirilemez)
+   - **Toggle/Delete:** 🗑️ butonuna tıklayarak deaktive edin (soft delete)
 
 ## Mock Data
 
@@ -165,22 +175,27 @@ Backend henüz hazır değilse, sistem otomatik olarak mock data gösterir:
 
 ### 1. Başarılı İşlemler
 ```bash
-# List
-curl http://localhost:8000/api/domestic-status
+# List (sadece aktif kayıtlar)
+curl http://localhost:8000/api/domestic-statuses
 
 # Create
-curl -X POST http://localhost:8000/api/domestic-status \
+curl -X POST http://localhost:8000/api/domestic-statuses \
   -H "Content-Type: application/json" \
-  -d '{"code":"DOMESTIC","label":"Evcil"}'
+  -d '{"code":"SEMI_WILD","label":"Yarı Vahşi"}'
 
-# Update
-curl -X PUT http://localhost:8000/api/domestic-status/1 \
+# Update (sadece label) - ✅ YENİ!
+curl -X PUT http://localhost:8000/api/domestic-statuses/DOMESTICATED \
   -H "Content-Type: application/json" \
-  -d '{"code":"DOMESTIC","label":"Evcil Hayvan"}'
+  -d '{"label":"Evcil (Updated)"}'
 
-# Delete
-curl -X DELETE http://localhost:8000/api/domestic-status/1
+# Toggle (soft delete / reactivate)
+curl -X PATCH http://localhost:8000/api/domestic-statuses/DOMESTICATED/toggle
 ```
+
+**NOT:** 
+- ✅ PUT endpoint'i eklendi - sadece **label** güncellenebilir
+- Code alanı immutable (değiştirilemez)
+- Toggle ile soft delete yapılıyor
 
 ### 2. Hata Senaryoları
 - Duplicate code

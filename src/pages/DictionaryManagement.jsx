@@ -1,37 +1,40 @@
 import { useState, useEffect } from 'react'
 import { 
   getDictionaryItems, 
-  createDictionaryItem, 
-  updateDictionaryItem, 
+  createDictionaryItem,
+  updateDictionaryItem,
   deleteDictionaryItem 
 } from '../api/dictionary.js'
 
+// Dictionary configurations
+// supportsUpdate: Backend'de PUT endpoint'i var mı? (Swagger'dan kontrol edildi - 2025-10-25)
+// ✅ Tüm dictionary'ler artık PUT endpoint'i destekliyor!
 const DICTIONARIES = [
-  { id: 'asset-status', name: 'AssetStatus', label: 'Varlık Durumu', icon: '📦' },
-  { id: 'asset-type', name: 'AssetType', label: 'Varlık Tipi', icon: '🏷️' },
-  { id: 'color', name: 'Color', label: 'Renk', icon: '🎨' },
-  { id: 'domestic-status', name: 'DomesticStatus', label: 'Evcillik Durumu', icon: '🏠' },
-  { id: 'dose-route', name: 'DoseRoute', label: 'Doz Yolu', icon: '💉' },
-  { id: 'event-type', name: 'EventType', label: 'Etkinlik Tipi', icon: '📅' },
-  { id: 'facility-type', name: 'FacilityType', label: 'Tesis Tipi', icon: '🏢' },
-  { id: 'health-flag', name: 'HealthFlag', label: 'Sağlık Durumu', icon: '🏥' },
-  { id: 'hold-type', name: 'HoldType', label: 'Bekleme Tipi', icon: '⏸️' },
-  { id: 'med-event-type', name: 'MedEventType', label: 'Tıbbi Olay Tipi', icon: '🩺' },
-  { id: 'observation-category', name: 'ObservationCategory', label: 'Gözlem Kategorisi', icon: '👁️' },
-  { id: 'outcome-type', name: 'OutcomeType', label: 'Sonuç Tipi', icon: '🎯' },
-  { id: 'placement-status', name: 'PlacementStatus', label: 'Yerleştirme Durumu', icon: '📍' },
-  { id: 'placement-type', name: 'PlacementType', label: 'Yerleştirme Tipi', icon: '🏡' },
-  { id: 'service-type', name: 'ServiceType', label: 'Hizmet Tipi', icon: '🔧' },
-  { id: 'sex', name: 'Sex', label: 'Cinsiyet', icon: '⚧️' },
-  { id: 'size', name: 'Size', label: 'Boyut', icon: '📏' },
-  { id: 'source-type', name: 'SourceType', label: 'Kaynak Tipi', icon: '📥' },
-  { id: 'temperament', name: 'Temperament', label: 'Mizaç', icon: '😊' },
-  { id: 'training-level', name: 'TrainingLevel', label: 'Eğitim Seviyesi', icon: '🎓' },
-  { id: 'unit-type', name: 'UnitType', label: 'Birim Tipi', icon: '📊' },
-  { id: 'vaccine', name: 'Vaccine', label: 'Aşı', icon: '💊' },
-  { id: 'volunteer-area', name: 'VolunteerAreaDictionary', label: 'Gönüllü Bölgesi', icon: '🗺️' },
-  { id: 'volunteer-status', name: 'VolunteerStatus', label: 'Gönüllü Durumu', icon: '👋' },
-  { id: 'zone-purpose', name: 'ZonePurpose', label: 'Bölge Amacı', icon: '🌍' }
+  { id: 'asset-status', name: 'AssetStatus', label: 'Varlık Durumu', icon: '📦', supportsUpdate: true },
+  { id: 'asset-type', name: 'AssetType', label: 'Varlık Tipi', icon: '🏷️', supportsUpdate: true },
+  { id: 'color', name: 'Color', label: 'Renk', icon: '🎨', supportsUpdate: true },
+  { id: 'domestic-status', name: 'DomesticStatus', label: 'Evcillik Durumu', icon: '🏠', supportsUpdate: true },
+  { id: 'dose-route', name: 'DoseRoute', label: 'Doz Yolu', icon: '💉', supportsUpdate: true },
+  { id: 'event-type', name: 'EventType', label: 'Etkinlik Tipi', icon: '📅', supportsUpdate: true },
+  { id: 'facility-type', name: 'FacilityType', label: 'Tesis Tipi', icon: '🏢', supportsUpdate: true },
+  { id: 'health-flag', name: 'HealthFlag', label: 'Sağlık Durumu', icon: '🏥', supportsUpdate: true },
+  { id: 'hold-type', name: 'HoldType', label: 'Bekleme Tipi', icon: '⏸️', supportsUpdate: true },
+  { id: 'med-event-type', name: 'MedEventType', label: 'Tıbbi Olay Tipi', icon: '🩺', supportsUpdate: true },
+  { id: 'observation-category', name: 'ObservationCategory', label: 'Gözlem Kategorisi', icon: '👁️', supportsUpdate: true },
+  { id: 'outcome-type', name: 'OutcomeType', label: 'Sonuç Tipi', icon: '🎯', supportsUpdate: true },
+  { id: 'placement-status', name: 'PlacementStatus', label: 'Yerleştirme Durumu', icon: '📍', supportsUpdate: true },
+  { id: 'placement-type', name: 'PlacementType', label: 'Yerleştirme Tipi', icon: '🏡', supportsUpdate: true },
+  { id: 'service-type', name: 'ServiceType', label: 'Hizmet Tipi', icon: '🔧', supportsUpdate: true },
+  { id: 'sex', name: 'Sex', label: 'Cinsiyet', icon: '⚧️', supportsUpdate: true },
+  { id: 'size', name: 'Size', label: 'Boyut', icon: '📏', supportsUpdate: true },
+  { id: 'source-type', name: 'SourceType', label: 'Kaynak Tipi', icon: '📥', supportsUpdate: true },
+  { id: 'temperament', name: 'Temperament', label: 'Mizaç', icon: '😊', supportsUpdate: true },
+  { id: 'training-level', name: 'TrainingLevel', label: 'Eğitim Seviyesi', icon: '🎓', supportsUpdate: true },
+  { id: 'unit-type', name: 'UnitType', label: 'Birim Tipi', icon: '📊', supportsUpdate: true },
+  { id: 'vaccine', name: 'Vaccine', label: 'Aşı', icon: '💊', supportsUpdate: true },
+  { id: 'volunteer-area', name: 'VolunteerAreaDictionary', label: 'Gönüllü Bölgesi', icon: '🗺️', supportsUpdate: true },
+  { id: 'volunteer-status', name: 'VolunteerStatus', label: 'Gönüllü Durumu', icon: '👋', supportsUpdate: true },
+  { id: 'zone-purpose', name: 'ZonePurpose', label: 'Bölge Amacı', icon: '🌍', supportsUpdate: true }
 ]
 
 export default function DictionaryManagement() {
@@ -45,22 +48,22 @@ export default function DictionaryManagement() {
 
   useEffect(() => {
     loadDictionaryItems()
-  }, [selectedDictionary])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDictionary.id])
 
   const loadDictionaryItems = async () => {
     setLoading(true)
     try {
       // Backend API entegrasyonu
       const data = await getDictionaryItems(selectedDictionary.id)
-      setItems(data)
+      console.log('Loaded dictionary items:', data)
+      // Backend'den gelen data'da id yok, code'u id olarak kullanıyoruz
+      const itemsWithId = data.map(item => ({ ...item, id: item.code }))
+      setItems(itemsWithId)
     } catch (error) {
       console.error('Error loading dictionary items:', error)
-      // Hata durumunda mock data göster
-      setItems([
-        { id: 1, code: 'ACTIVE', label: 'Aktif' },
-        { id: 2, code: 'INACTIVE', label: 'Pasif' },
-        { id: 3, code: 'PENDING', label: 'Beklemede' }
-      ])
+      alert('Veri yüklenirken hata oluştu: ' + error.message + '\n\nLütfen backend sunucusunun çalıştığından emin olun.')
+      setItems([])
     } finally {
       setLoading(false)
     }
@@ -78,17 +81,17 @@ export default function DictionaryManagement() {
     setIsModalOpen(true)
   }
 
-  const handleDelete = async (item) => {
-    if (!confirm(`"${item.label}" kaydını silmek istediğinizden emin misiniz?`)) return
+  const handleToggle = async (item) => {
+    if (!confirm(`"${item.label}" kaydını deaktive etmek istediğinizden emin misiniz? (Tekrar aktif etmek için backend'e erişim gerekir)`)) return
     
     try {
-      // Backend API entegrasyonu
-      await deleteDictionaryItem(selectedDictionary.id, item.id)
-      setItems(items.filter(i => i.id !== item.id))
-      alert('Kayıt başarıyla silindi!')
+      // Backend API entegrasyonu - Toggle (soft delete)
+      await deleteDictionaryItem(selectedDictionary.id, item.code)
+      setItems(items.filter(i => i.code !== item.code))
+      alert('Kayıt başarıyla deaktive edildi!')
     } catch (error) {
-      console.error('Error deleting item:', error)
-      alert('Silme işlemi başarısız: ' + error.message)
+      console.error('Error toggling item:', error)
+      alert('İşlem başarısız: ' + error.message)
     }
   }
 
@@ -97,19 +100,21 @@ export default function DictionaryManagement() {
     
     try {
       if (editingItem) {
-        // Backend API entegrasyonu - Update
-        const updatedItem = await updateDictionaryItem(selectedDictionary.id, editingItem.id, formData)
-        setItems(items.map(i => i.id === editingItem.id ? { ...i, ...updatedItem } : i))
+        // Backend API entegrasyonu - Update (sadece label)
+        await updateDictionaryItem(selectedDictionary.id, editingItem.code, { label: formData.label })
         alert('Kayıt başarıyla güncellendi!')
       } else {
         // Backend API entegrasyonu - Create
-        const newItem = await createDictionaryItem(selectedDictionary.id, formData)
-        setItems([...items, newItem])
+        await createDictionaryItem(selectedDictionary.id, formData)
         alert('Kayıt başarıyla eklendi!')
       }
       
       setIsModalOpen(false)
+      setEditingItem(null)
       setFormData({ code: '', label: '' })
+      
+      // Listeyi yenile
+      await loadDictionaryItems()
     } catch (error) {
       console.error('Error saving item:', error)
       alert('Kayıt işlemi başarısız: ' + error.message)
@@ -151,6 +156,20 @@ export default function DictionaryManagement() {
             </h2>
             <p className="dictionary-subtitle">
               {selectedDictionary.name} tablosunu yönetin
+              {!selectedDictionary.supportsUpdate && (
+                <span style={{ 
+                  display: 'inline-block', 
+                  marginLeft: '8px', 
+                  padding: '2px 8px', 
+                  background: '#fef2f2', 
+                  color: '#991b1b',
+                  borderRadius: '4px',
+                  fontSize: '12px',
+                  fontWeight: '600'
+                }}>
+                  ⚠️ Güncelleme desteklenmiyor (Backend'de PUT endpoint yok)
+                </span>
+              )}
             </p>
           </div>
           <button className="btn btn-primary" onClick={handleCreate}>
@@ -197,26 +216,28 @@ export default function DictionaryManagement() {
                     </td>
                   </tr>
                 ) : (
-                  filteredItems.map((item) => (
-                    <tr key={item.id}>
-                      <td>{item.id}</td>
+                  filteredItems.map((item, index) => (
+                    <tr key={item.code}>
+                      <td>{index + 1}</td>
                       <td>
                         <span className="code-badge">{item.code}</span>
                       </td>
                       <td>{item.label}</td>
                       <td>
                         <div className="action-buttons">
-                          <button
-                            className="action-btn edit"
-                            onClick={() => handleEdit(item)}
-                            title="Düzenle"
-                          >
-                            ✏️
-                          </button>
+                          {selectedDictionary.supportsUpdate && (
+                            <button
+                              className="action-btn edit"
+                              onClick={() => handleEdit(item)}
+                              title="Düzenle"
+                            >
+                              ✏️
+                            </button>
+                          )}
                           <button
                             className="action-btn delete"
-                            onClick={() => handleDelete(item)}
-                            title="Sil"
+                            onClick={() => handleToggle(item)}
+                            title="Deaktive Et"
                           >
                             🗑️
                           </button>
@@ -248,12 +269,18 @@ export default function DictionaryManagement() {
                   type="text"
                   id="code"
                   value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
                   required
-                  placeholder="Örn: ACTIVE"
+                  placeholder="Örn: FRIENDLY"
                   className="form-input-dict"
+                  disabled={!!editingItem}
+                  style={editingItem ? { backgroundColor: '#f3f4f6', cursor: 'not-allowed' } : {}}
                 />
-                <small className="form-hint">Büyük harfle, alt çizgi ile yazın</small>
+                <small className="form-hint">
+                  {editingItem 
+                    ? 'Kod değiştirilemez (sadece etiket güncellenebilir)' 
+                    : 'Büyük harfle, alt çizgi ile yazın (örn: FRIENDLY, LAP_LOVER)'}
+                </small>
               </div>
               <div className="form-group-dict">
                 <label htmlFor="label">Etiket *</label>
