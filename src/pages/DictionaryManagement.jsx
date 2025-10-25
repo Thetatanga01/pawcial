@@ -163,20 +163,6 @@ export default function DictionaryManagement() {
             </h2>
             <p className="dictionary-subtitle">
               {selectedDictionary.name} tablosunu yönetin
-              {!selectedDictionary.supportsUpdate && (
-                <span style={{ 
-                  display: 'inline-block', 
-                  marginLeft: '8px', 
-                  padding: '2px 8px', 
-                  background: '#fef2f2', 
-                  color: '#991b1b',
-                  borderRadius: '4px',
-                  fontSize: '12px',
-                  fontWeight: '600'
-                }}>
-                  ⚠️ Güncelleme desteklenmiyor (Backend'de PUT endpoint yok)
-                </span>
-              )}
             </p>
           </div>
           <button className="btn btn-primary" onClick={handleCreate}>
