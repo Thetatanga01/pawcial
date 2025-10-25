@@ -1491,3 +1491,81 @@ body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto
     max-width: 100%;
   }
 }
+
+/* Toast Notification System */
+.notification {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  min-width: 320px;
+  max-width: 500px;
+  padding: 16px 24px;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  animation: slideDown 0.3s ease-out;
+  backdrop-filter: blur(10px);
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.notification-success {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.notification-error {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.notification-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.notification-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.notification-message {
+  font-weight: 500;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+  .notification {
+    min-width: 280px;
+    max-width: calc(100vw - 32px);
+    padding: 14px 20px;
+    top: 16px;
+  }
+  
+  .notification-message {
+    font-size: 14px;
+  }
+}

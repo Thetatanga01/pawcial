@@ -45,6 +45,13 @@ export default function DictionaryManagement() {
   const [editingItem, setEditingItem] = useState(null)
   const [formData, setFormData] = useState({ code: '', label: '' })
   const [searchTerm, setSearchTerm] = useState('')
+  const [notification, setNotification] = useState(null)
+
+  // Notification gösterme fonksiyonu
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type })
+    setTimeout(() => setNotification(null), 3000)
+  }
 
   useEffect(() => {
     loadDictionaryItems()
@@ -62,7 +69,7 @@ export default function DictionaryManagement() {
       setItems(itemsWithId)
     } catch (error) {
       console.error('Error loading dictionary items:', error)
-      alert('Veri yüklenirken hata oluştu: ' + error.message + '\n\nLütfen backend sunucusunun çalıştığından emin olun.')
+      showNotification('Veri yüklenirken hata oluştu. Backend sunucusunun çalıştığından emin olun.', 'error')
       setItems([])
     } finally {
       setLoading(false)
@@ -88,10 +95,10 @@ export default function DictionaryManagement() {
       // Backend API entegrasyonu - Toggle (soft delete)
       await deleteDictionaryItem(selectedDictionary.id, item.code)
       setItems(items.filter(i => i.code !== item.code))
-      alert('Kayıt başarıyla deaktive edildi!')
+      showNotification('Kayıt başarıyla deaktive edildi!', 'success')
     } catch (error) {
       console.error('Error toggling item:', error)
-      alert('İşlem başarısız: ' + error.message)
+      showNotification('İşlem başarısız: ' + error.message, 'error')
     }
   }
 
@@ -102,11 +109,11 @@ export default function DictionaryManagement() {
       if (editingItem) {
         // Backend API entegrasyonu - Update (sadece label)
         await updateDictionaryItem(selectedDictionary.id, editingItem.code, { label: formData.label })
-        alert('Kayıt başarıyla güncellendi!')
+        showNotification('Kayıt başarıyla güncellendi!', 'success')
       } else {
         // Backend API entegrasyonu - Create
         await createDictionaryItem(selectedDictionary.id, formData)
-        alert('Kayıt başarıyla eklendi!')
+        showNotification('Kayıt başarıyla eklendi!', 'success')
       }
       
       setIsModalOpen(false)
@@ -117,7 +124,7 @@ export default function DictionaryManagement() {
       await loadDictionaryItems()
     } catch (error) {
       console.error('Error saving item:', error)
-      alert('Kayıt işlemi başarısız: ' + error.message)
+      showNotification('Kayıt işlemi başarısız: ' + error.message, 'error')
     }
   }
 
@@ -304,6 +311,18 @@ export default function DictionaryManagement() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Notification */}
+      {notification && (
+        <div className={`notification notification-${notification.type}`}>
+          <div className="notification-content">
+            <span className="notification-icon">
+              {notification.type === 'success' ? '✓' : '✕'}
+            </span>
+            <span className="notification-message">{notification.message}</span>
           </div>
         </div>
       )}
