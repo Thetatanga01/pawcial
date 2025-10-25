@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import DictionaryManagement from './DictionaryManagement.jsx'
 
 export default function Admin() {
   const [activeSection, setActiveSection] = useState('dashboard')
@@ -22,6 +23,7 @@ export default function Admin() {
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+    { id: 'dictionaries', label: 'Sözlük Tabloları', icon: '📚' },
     { id: 'pets', label: 'Hayvanlar', icon: '🐾' },
     { id: 'events', label: 'Etkinlikler', icon: '📅' },
     { id: 'videos', label: 'Videolar', icon: '🎥' },
@@ -211,8 +213,13 @@ export default function Admin() {
             </>
           )}
 
+          {/* Dictionary Management Section */}
+          {activeSection === 'dictionaries' && (
+            <DictionaryManagement />
+          )}
+
           {/* Placeholder for other sections */}
-          {activeSection !== 'dashboard' && (
+          {activeSection !== 'dashboard' && activeSection !== 'dictionaries' && (
             <div className="admin-placeholder">
               <div className="placeholder-icon">
                 {menuItems.find(item => item.id === activeSection)?.icon}
@@ -227,6 +234,7 @@ export default function Admin() {
                 {activeSection === 'applications' && 'Başvuruları Görüntüle'}
                 {activeSection === 'comments' && 'Yorumları Görüntüle'}
                 {activeSection === 'settings' && 'Ayarları Düzenle'}
+                {activeSection === 'dictionaries' && 'Sözlük Tablosu Seç'}
               </button>
             </div>
           )}
