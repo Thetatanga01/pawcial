@@ -1,6 +1,18 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import DictionaryManagement from './DictionaryManagement.jsx'
+import AnimalManagement from './AnimalManagement.jsx'
+import EntityManagement from './EntityManagement.jsx'
+import { 
+  SPECIES_CONFIG, 
+  BREED_CONFIG, 
+  PERSON_CONFIG, 
+  VOLUNTEER_CONFIG,
+  FACILITY_CONFIG,
+  ZONE_CONFIG,
+  ASSET_CONFIG
+} from '../config/entityConfigs.js'
+import { createApiHelpers } from '../api/genericApi.js'
 
 export default function Admin() {
   const [activeSection, setActiveSection] = useState('dashboard')
@@ -25,9 +37,15 @@ export default function Admin() {
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
     { id: 'dictionaries', label: 'Sözlük Tabloları', icon: '📚' },
     { id: 'pets', label: 'Hayvanlar', icon: '🐾' },
+    { id: 'species', label: 'Türler', icon: '🦁' },
+    { id: 'breeds', label: 'Irklar', icon: '🐕' },
+    { id: 'persons', label: 'Kişiler', icon: '👤' },
+    { id: 'volunteers', label: 'Gönüllüler', icon: '🙋' },
+    { id: 'facilities', label: 'Tesisler', icon: '🏢' },
+    { id: 'zones', label: 'Bölgeler', icon: '🗺️' },
+    { id: 'assets', label: 'Varlıklar', icon: '📦' },
     { id: 'events', label: 'Etkinlikler', icon: '📅' },
     { id: 'videos', label: 'Videolar', icon: '🎥' },
-    { id: 'users', label: 'Kullanıcılar', icon: '👥' },
     { id: 'applications', label: 'Başvurular', icon: '📝' },
     { id: 'comments', label: 'Yorumlar', icon: '💬' },
     { id: 'settings', label: 'Ayarlar', icon: '⚙️' }
@@ -218,8 +236,78 @@ export default function Admin() {
             <DictionaryManagement />
           )}
 
+          {/* Animals Management Section */}
+          {activeSection === 'pets' && (
+            <AnimalManagement />
+          )}
+
+          {/* Species Management */}
+          {activeSection === 'species' && (
+            <EntityManagement 
+              entityConfig={SPECIES_CONFIG}
+              apiHelpers={createApiHelpers('species')}
+            />
+          )}
+
+          {/* Breeds Management */}
+          {activeSection === 'breeds' && (
+            <EntityManagement 
+              entityConfig={BREED_CONFIG}
+              apiHelpers={createApiHelpers('breeds')}
+            />
+          )}
+
+          {/* Persons Management */}
+          {activeSection === 'persons' && (
+            <EntityManagement 
+              entityConfig={PERSON_CONFIG}
+              apiHelpers={createApiHelpers('persons')}
+            />
+          )}
+
+          {/* Volunteers Management */}
+          {activeSection === 'volunteers' && (
+            <EntityManagement 
+              entityConfig={VOLUNTEER_CONFIG}
+              apiHelpers={createApiHelpers('volunteers')}
+            />
+          )}
+
+          {/* Facilities Management */}
+          {activeSection === 'facilities' && (
+            <EntityManagement 
+              entityConfig={FACILITY_CONFIG}
+              apiHelpers={createApiHelpers('facilities')}
+            />
+          )}
+
+          {/* Zones Management */}
+          {activeSection === 'zones' && (
+            <EntityManagement 
+              entityConfig={ZONE_CONFIG}
+              apiHelpers={createApiHelpers('facility-zones')}
+            />
+          )}
+
+          {/* Assets Management */}
+          {activeSection === 'assets' && (
+            <EntityManagement 
+              entityConfig={ASSET_CONFIG}
+              apiHelpers={createApiHelpers('assets')}
+            />
+          )}
+
           {/* Placeholder for other sections */}
-          {activeSection !== 'dashboard' && activeSection !== 'dictionaries' && (
+          {activeSection !== 'dashboard' 
+            && activeSection !== 'dictionaries' 
+            && activeSection !== 'pets'
+            && activeSection !== 'species'
+            && activeSection !== 'breeds'
+            && activeSection !== 'persons'
+            && activeSection !== 'volunteers'
+            && activeSection !== 'facilities'
+            && activeSection !== 'zones'
+            && activeSection !== 'assets' && (
             <div className="admin-placeholder">
               <div className="placeholder-icon">
                 {menuItems.find(item => item.id === activeSection)?.icon}

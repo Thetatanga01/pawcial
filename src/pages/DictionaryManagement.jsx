@@ -247,8 +247,8 @@ export default function DictionaryManagement() {
 
       {/* Modal */}
       {isModalOpen && (
-        <div className="modal-overlay-dict" onClick={() => setIsModalOpen(false)}>
-          <div className="modal-dict" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay-dict">
+          <div className="modal-dict">
             <div className="modal-dict-header">
               <h3>{editingItem ? 'Kaydı Düzenle' : 'Yeni Kayıt Ekle'}</h3>
               <button className="modal-close-btn" onClick={() => setIsModalOpen(false)}>
