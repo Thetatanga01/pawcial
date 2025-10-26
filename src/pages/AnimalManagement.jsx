@@ -18,22 +18,23 @@ export default function AnimalManagement() {
   const [sizes, setSizes] = useState([])
   const [sexes, setSexes] = useState([])
   const [temperaments, setTemperaments] = useState([])
-  const [domesticStatuses, setDomesticStatuses] = useState([])
   const [healthFlags, setHealthFlags] = useState([])
 
-  // Form data - Backend Swagger'a göre güncellenmiş
+  // Form data - Backend Swagger'a göre güncellenmiş (DOĞRU FIELD İSİMLERİ)
   const [formData, setFormData] = useState({
     name: '',
     speciesId: '',
     breedId: '',
-    sex: '',          // sexCode → sex
-    color: '',        // colorCode → color
-    size: '',         // sizeCode → size
-    trainingLevel: '', // Yeni field
+    sex: '',
+    color: '',
+    size: '',
+    trainingLevel: '',
     birthDate: '',
-    sterilized: false,  // Yeni boolean field
-    isMixed: false,     // Yeni boolean field
-    originNote: ''      // Yeni field
+    sterilized: false,
+    isMixed: false,
+    originNote: '',
+    temperamentCodes: [],    // Backend'in beklediği field ismi
+    healthFlagCodes: []      // Backend'in beklediği field ismi
   })
 
   // Notification helper
@@ -116,7 +117,7 @@ export default function AnimalManagement() {
         }
       }
 
-      // Load all required data
+      // Load all required data (Backend Swagger'a göre güncellenmiş)
       const [
         speciesData,
         breedsData,
@@ -124,7 +125,6 @@ export default function AnimalManagement() {
         sizesData,
         sexesData,
         temperamentsData,
-        domesticStatusesData,
         healthFlagsData
       ] = await Promise.all([
         loadSpecies(),
@@ -133,7 +133,6 @@ export default function AnimalManagement() {
         getDictionaryItems('size').catch(() => []),
         getDictionaryItems('sex').catch(() => []),
         getDictionaryItems('temperament').catch(() => []),
-        getDictionaryItems('domestic-status').catch(() => []),
         getDictionaryItems('health-flag').catch(() => [])
       ])
 
@@ -144,7 +143,6 @@ export default function AnimalManagement() {
       setSizes(sizesData)
       setSexes(sexesData)
       setTemperaments(temperamentsData)
-      setDomesticStatuses(domesticStatusesData)
       setHealthFlags(healthFlagsData)
     } catch (error) {
       console.error('Error loading dictionaries:', error)
@@ -164,7 +162,9 @@ export default function AnimalManagement() {
       birthDate: '',
       sterilized: false,
       isMixed: false,
-      originNote: ''
+      originNote: '',
+      temperamentCodes: [],
+      healthFlagCodes: []
     })
     setIsModalOpen(true)
   }
@@ -176,6 +176,8 @@ export default function AnimalManagement() {
     console.log('Available fields:', Object.keys(animal))
     
     // Backend'den gelen değerleri direkt map et (Swagger'a göre güncellenmiş)
+    // Backend RESPONSE'da: temperaments, healthFlags (array)
+    // Backend REQUEST'te: temperamentCodes, healthFlagCodes (array)
     const formValues = {
       name: animal.name || '',
       speciesId: animal.speciesId || '',
@@ -187,7 +189,9 @@ export default function AnimalManagement() {
       birthDate: animal.birthDate || '',
       sterilized: animal.sterilized || false,
       isMixed: animal.isMixed || false,
-      originNote: animal.originNote || ''
+      originNote: animal.originNote || '',
+      temperamentCodes: animal.temperaments || [],  // Response'da 'temperaments', form'da 'temperamentCodes'
+      healthFlagCodes: animal.healthFlags || []     // Response'da 'healthFlags', form'da 'healthFlagCodes'
     }
     
     console.log('Form values after mapping:', formValues)
@@ -293,20 +297,21 @@ export default function AnimalManagement() {
             <table className="dictionary-table">
               <thead>
                 <tr>
-                  <th style={{ width: '50px' }}>ID</th>
-                  <th style={{ width: '25%' }}>İsim</th>
-                  <th style={{ width: '15%' }}>Tür</th>
-                  <th style={{ width: '15%' }}>Irk</th>
+                  <th style={{ width: '50px' }}>#</th>
+                  <th style={{ width: '18%' }}>İsim</th>
+                  <th style={{ width: '12%' }}>Tür</th>
+                  <th style={{ width: '12%' }}>Irk</th>
                   <th style={{ width: '10%' }}>Cinsiyet</th>
                   <th style={{ width: '10%' }}>Renk</th>
-                  <th style={{ width: '15%' }}>Doğum Tarihi</th>
+                  <th style={{ width: '10%' }}>Boyut</th>
+                  <th style={{ width: '13%' }}>Doğum Tarihi</th>
                   <th style={{ width: '120px' }}>İşlemler</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredAnimals.length === 0 ? (
                   <tr>
-                    <td colSpan="8" className="empty-state">
+                    <td colSpan="9" className="empty-state">
                       {searchTerm ? 'Arama sonucu bulunamadı' : 'Henüz hayvan eklenmemiş'}
                     </td>
                   </tr>
@@ -315,10 +320,11 @@ export default function AnimalManagement() {
                     <tr key={animal.id}>
                       <td>{index + 1}</td>
                       <td><strong>{animal.name}</strong></td>
-                      <td>{animal.speciesName || animal.speciesId}</td>
-                      <td>{animal.breedName || animal.breedId}</td>
-                      <td>{animal.sexCode}</td>
-                      <td>{animal.colorCode}</td>
+                      <td>{animal.speciesName || '-'}</td>
+                      <td>{animal.breedName || '-'}</td>
+                      <td>{animal.sex || '-'}</td>
+                      <td>{animal.color || '-'}</td>
+                      <td>{animal.size || '-'}</td>
                       <td>{animal.birthDate || '-'}</td>
                       <td>
                         <div className="action-buttons">
@@ -418,13 +424,31 @@ export default function AnimalManagement() {
                   </small>
                 </div>
 
+                {/* Cinsiyet */}
+                <div className="form-group-dict">
+                  <label htmlFor="sex">Cinsiyet</label>
+                  <select
+                    id="sex"
+                    value={formData.sex}
+                    onChange={(e) => setFormData({ ...formData, sex: e.target.value })}
+                    className="form-input-dict"
+                  >
+                    <option value="">Seçiniz</option>
+                    {sexes.map((item) => (
+                      <option key={item.code} value={item.code}>
+                        {item.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Renk */}
                 <div className="form-group-dict">
-                  <label htmlFor="colorCode">Renk</label>
+                  <label htmlFor="color">Renk</label>
                   <select
-                    id="colorCode"
-                    value={formData.colorCode}
-                    onChange={(e) => setFormData({ ...formData, colorCode: e.target.value })}
+                    id="color"
+                    value={formData.color}
+                    onChange={(e) => setFormData({ ...formData, color: e.target.value })}
                     className="form-input-dict"
                   >
                     <option value="">Seçiniz</option>
@@ -438,11 +462,11 @@ export default function AnimalManagement() {
 
                 {/* Boyut */}
                 <div className="form-group-dict">
-                  <label htmlFor="sizeCode">Boyut</label>
+                  <label htmlFor="size">Boyut</label>
                   <select
-                    id="sizeCode"
-                    value={formData.sizeCode}
-                    onChange={(e) => setFormData({ ...formData, sizeCode: e.target.value })}
+                    id="size"
+                    value={formData.size}
+                    onChange={(e) => setFormData({ ...formData, size: e.target.value })}
                     className="form-input-dict"
                   >
                     <option value="">Seçiniz</option>
@@ -454,25 +478,81 @@ export default function AnimalManagement() {
                   </select>
                 </div>
 
-                {/* Cinsiyet */}
+                {/* Eğitim Seviyesi */}
                 <div className="form-group-dict">
-                  <label htmlFor="sexCode">Cinsiyet *</label>
+                  <label htmlFor="trainingLevel">Eğitim Seviyesi</label>
                   <select
-                    id="sexCode"
-                    value={formData.sexCode}
-                    onChange={(e) => setFormData({ ...formData, sexCode: e.target.value })}
-                    required
+                    id="trainingLevel"
+                    value={formData.trainingLevel}
+                    onChange={(e) => setFormData({ ...formData, trainingLevel: e.target.value })}
                     className="form-input-dict"
                   >
                     <option value="">Seçiniz</option>
-                    {sexes.map((item) => (
-                      <option key={item.code} value={item.code}>
-                        {item.label}
-                      </option>
-                    ))}
+                    <option value="NONE">Yok</option>
+                    <option value="BASIC">Temel</option>
+                    <option value="INTERMEDIATE">Orta</option>
+                    <option value="ADVANCED">İleri</option>
                   </select>
                 </div>
 
+                {/* Kısırlaştırılmış */}
+                <div className="form-group-dict">
+                  <label htmlFor="sterilized">
+                    <input
+                      type="checkbox"
+                      id="sterilized"
+                      checked={formData.sterilized}
+                      onChange={(e) => setFormData({ ...formData, sterilized: e.target.checked })}
+                      className="form-checkbox"
+                      style={{ marginRight: '8px' }}
+                    />
+                    Kısırlaştırılmış
+                  </label>
+                </div>
+
+                {/* Melez */}
+                <div className="form-group-dict">
+                  <label htmlFor="isMixed">
+                    <input
+                      type="checkbox"
+                      id="isMixed"
+                      checked={formData.isMixed}
+                      onChange={(e) => setFormData({ ...formData, isMixed: e.target.checked })}
+                      className="form-checkbox"
+                      style={{ marginRight: '8px' }}
+                    />
+                    Melez
+                  </label>
+                </div>
+
+                {/* Doğum Tarihi */}
+                <div className="form-group-dict">
+                  <label htmlFor="birthDate">Doğum Tarihi</label>
+                  <input
+                    type="date"
+                    id="birthDate"
+                    value={formData.birthDate}
+                    onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
+                    className="form-input-dict"
+                  />
+                </div>
+              </div>
+
+              {/* Menşe Notu */}
+              <div className="form-group-dict">
+                <label htmlFor="originNote">Menşe Notu</label>
+                <textarea
+                  id="originNote"
+                  value={formData.originNote}
+                  onChange={(e) => setFormData({ ...formData, originNote: e.target.value })}
+                  placeholder="Hayvanın kökeni, nereden geldiği vb. bilgiler..."
+                  className="form-input-dict"
+                  rows="4"
+                />
+              </div>
+
+              {/* Grid for multi-selects */}
+              <div className="form-grid-2">
                 {/* Mizaç - Multi Select */}
                 <div className="form-group-dict">
                   <label htmlFor="temperamentCodes">Mizaç (Çoklu Seçim)</label>
@@ -498,66 +578,30 @@ export default function AnimalManagement() {
                   </small>
                 </div>
 
-                {/* Evcillik Durumu */}
+                {/* Sağlık Durumu - Multi Select */}
                 <div className="form-group-dict">
-                  <label htmlFor="domesticStatusCode">Evcillik Durumu</label>
+                  <label htmlFor="healthFlagCodes">Sağlık Durumu (Çoklu Seçim)</label>
                   <select
-                    id="domesticStatusCode"
-                    value={formData.domesticStatusCode}
-                    onChange={(e) => setFormData({ ...formData, domesticStatusCode: e.target.value })}
-                    className="form-input-dict"
+                    id="healthFlagCodes"
+                    multiple
+                    value={formData.healthFlagCodes}
+                    onChange={(e) => {
+                      const selectedOptions = Array.from(e.target.selectedOptions, option => option.value)
+                      setFormData({ ...formData, healthFlagCodes: selectedOptions })
+                    }}
+                    className="form-input-dict form-input-multiselect"
+                    size={5}
                   >
-                    <option value="">Seçiniz</option>
-                    {domesticStatuses.map((item) => (
-                      <option key={item.code} value={item.code}>
-                        {item.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Sağlık Durumu */}
-                <div className="form-group-dict">
-                  <label htmlFor="healthFlagCode">Sağlık Durumu</label>
-                  <select
-                    id="healthFlagCode"
-                    value={formData.healthFlagCode}
-                    onChange={(e) => setFormData({ ...formData, healthFlagCode: e.target.value })}
-                    className="form-input-dict"
-                  >
-                    <option value="">Seçiniz</option>
                     {healthFlags.map((item) => (
                       <option key={item.code} value={item.code}>
                         {item.label}
                       </option>
                     ))}
                   </select>
+                  <small className="form-hint">
+                    Birden fazla seçim için Ctrl (Windows) veya Cmd (Mac) tuşuna basılı tutun
+                  </small>
                 </div>
-
-                {/* Doğum Tarihi */}
-                <div className="form-group-dict">
-                  <label htmlFor="birthDate">Doğum Tarihi</label>
-                  <input
-                    type="date"
-                    id="birthDate"
-                    value={formData.birthDate}
-                    onChange={(e) => setFormData({ ...formData, birthDate: e.target.value })}
-                    className="form-input-dict"
-                  />
-                </div>
-              </div>
-
-              {/* Açıklama */}
-              <div className="form-group-dict">
-                <label htmlFor="description">Açıklama</label>
-                <textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Hayvan hakkında ek bilgiler..."
-                  className="form-input-dict"
-                  rows="4"
-                />
               </div>
 
               <div className="modal-dict-footer">
