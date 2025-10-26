@@ -2,10 +2,11 @@
 const API_BASE_URL = 'http://localhost:8000/api';
 
 /**
- * Get all animals with optional filters
+ * Get all animals with optional filters and pagination
  * @param {Object} options - Query options
  * @param {boolean} options.all - Include archived/inactive animals (default: false)
- * @param {string} options.search - Search term for filtering
+ * @param {number} options.page - Page number (default: 0)
+ * @param {number} options.size - Page size (default: 20)
  */
 export async function getAnimals(options = {}) {
   try {
@@ -15,8 +16,11 @@ export async function getAnimals(options = {}) {
     if (options.all) {
       params.append('all', 'true');
     }
-    if (options.search && options.search.trim()) {
-      params.append('search', options.search.trim());
+    if (options.page !== undefined) {
+      params.append('page', options.page.toString());
+    }
+    if (options.size !== undefined) {
+      params.append('size', options.size.toString());
     }
     
     const queryString = params.toString();
@@ -34,8 +38,14 @@ export async function getAnimals(options = {}) {
     }
     
     const data = await response.json();
-    console.log('Fetched animals:', data.length, 'items');
-    return data;
+    console.log('Fetched paginated response:', {
+      page: data.page,
+      size: data.size,
+      totalElements: data.totalElements,
+      totalPages: data.totalPages,
+      contentLength: data.content?.length
+    });
+    return data; // Returns { content, page, size, totalElements, totalPages, hasNext, hasPrevious }
   } catch (error) {
     console.error('Error fetching animals:', error, error.stack);
     throw error;
@@ -162,6 +172,67 @@ export async function deleteAnimal(id) {
   } catch (error) {
     console.error('Error deleting animal:', error, error.stack);
     throw error;
+  }
+}
+
+/**
+ * Search animals with specific filters and pagination
+ * @param {Object} params - Search parameters
+ * @param {string} params.name - Filter by animal name
+ * @param {string} params.speciesName - Filter by species name
+ * @param {string} params.breedName - Filter by breed name
+ * @param {boolean} params.all - Include archived/inactive animals
+ * @param {number} params.page - Page number (default: 0)
+ * @param {number} params.size - Page size (default: 20)
+ */
+export async function searchAnimals(params = {}) {
+  try {
+    const queryParams = new URLSearchParams()
+    
+    if (params.name && params.name.trim()) {
+      queryParams.append('name', params.name.trim())
+    }
+    if (params.speciesName && params.speciesName.trim()) {
+      queryParams.append('speciesName', params.speciesName.trim())
+    }
+    if (params.breedName && params.breedName.trim()) {
+      queryParams.append('breedName', params.breedName.trim())
+    }
+    if (params.all) {
+      queryParams.append('all', 'true')
+    }
+    if (params.page !== undefined) {
+      queryParams.append('page', params.page.toString())
+    }
+    if (params.size !== undefined) {
+      queryParams.append('size', params.size.toString())
+    }
+    
+    const queryString = queryParams.toString()
+    const url = queryString 
+      ? `${API_BASE_URL}/animals/search?${queryString}`
+      : `${API_BASE_URL}/animals/search`
+    
+    console.log('Searching animals:', url)
+    const response = await fetch(url)
+    
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`Failed to search animals: ${response.status} - ${errorText}`)
+    }
+    
+    const data = await response.json()
+    console.log('Search paginated response:', {
+      page: data.page,
+      size: data.size,
+      totalElements: data.totalElements,
+      totalPages: data.totalPages,
+      contentLength: data.content?.length
+    })
+    return data // Returns { content, page, size, totalElements, totalPages, hasNext, hasPrevious }
+  } catch (error) {
+    console.error('Error searching animals:', error, error.stack)
+    throw error
   }
 }
 

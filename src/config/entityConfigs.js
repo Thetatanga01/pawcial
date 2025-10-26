@@ -177,7 +177,7 @@ export const VOLUNTEER_CONFIG = {
   labelSingle: 'Gönüllü',
   labelPlural: 'Gönüllüler',
   description: 'Gönüllü kayıtlarını yönetin',
-  searchFields: ['personId', 'volunteerAreaCode'],
+  searchFields: ['personFullName', 'volunteerAreaCode', 'volunteerStatusCode'],
   formLayout: 'grid',
   
   fields: [

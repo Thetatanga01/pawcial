@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { getDictionaryItems } from '../api/dictionary.js'
 
 /**
@@ -13,8 +13,19 @@ export default function EntityManagement({
   const [loading, setLoading] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState(null)
-  const [searchTerm, setSearchTerm] = useState('')
+  // Search values per backend param (from entityConfig.searchFields)
+  const [searchTerm, setSearchTerm] = useState('') // fallback (when no searchFields provided)
+  const [searchValues, setSearchValues] = useState({})
   const [showAll, setShowAll] = useState(false) // Backend'in 'all' parametresi
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(0)
+  const [pageSize, setPageSize] = useState(20)
+  const [totalElements, setTotalElements] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
+  const [hasNext, setHasNext] = useState(false)
+  const [hasPrevious, setHasPrevious] = useState(false)
+  // Debounce
+  const searchDebounceRef = useRef(null)
   const [notification, setNotification] = useState(null)
   const [confirmModal, setConfirmModal] = useState(null) // { title, message, onConfirm, confirmText, type, icon }
   const [dictionaries, setDictionaries] = useState({})
@@ -33,32 +44,88 @@ export default function EntityManagement({
     setTimeout(() => setNotification(null), 3000)
   }
 
-  // Load items when showAll or searchTerm changes
+  // Initialize searchValues based on config
   useEffect(() => {
-    loadItems()
-  }, [showAll, searchTerm])
+    const fields = Array.isArray(entityConfig.searchFields) ? entityConfig.searchFields : []
+    const initial = fields.reduce((acc, f) => { acc[f] = ''; return acc }, {})
+    setSearchValues(initial)
+    setSearchTerm('')
+    setCurrentPage(0)
+  }, [entityConfig])
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(0)
+  }, [showAll, searchTerm, JSON.stringify(searchValues)])
+
+  // Debounced load
+  useEffect(() => {
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current)
+    }
+    searchDebounceRef.current = setTimeout(() => {
+      loadItems()
+    }, 600)
+    return () => {
+      if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
+    }
+  }, [showAll, searchTerm, JSON.stringify(searchValues), currentPage, pageSize])
 
   // Load dictionaries
   useEffect(() => {
     loadDictionaries()
   }, [])
 
-  const loadItems = async () => {
+  const loadItems = useCallback(async () => {
     setLoading(true)
     try {
-      const data = await apiHelpers.getAll({
-        all: showAll,
-        search: searchTerm
-      })
-      setItems(data || [])
+      // Eğer arama metni varsa search endpoint'ini kullanmayı deneyelim; yoksa paged getAll
+      const fields = Array.isArray(entityConfig.searchFields) ? entityConfig.searchFields : []
+      const hasPerFieldSearch = fields.some((f) => (searchValues[f] || '').toString().trim() !== '')
+      const hasSearch = hasPerFieldSearch || (!!searchTerm && searchTerm.trim())
+      let response
+      if (hasSearch && apiHelpers.search) {
+        // Build extra params only for fields with value
+        const extraParams = {}
+        if (fields.length > 0) {
+          fields.forEach((field) => {
+            const v = (searchValues[field] || '').toString().trim()
+            if (v) extraParams[field] = v
+          })
+        }
+        // If there are per-field params, don't send generic 'search'
+        const params = {
+          all: showAll,
+          page: currentPage,
+          size: pageSize
+        }
+        if (fields.length === 0 && searchTerm.trim()) {
+          params.search = searchTerm.trim()
+        }
+        response = await apiHelpers.search(params, extraParams)
+      } else {
+        response = await apiHelpers.getAll({
+          all: showAll,
+          page: currentPage,
+          size: pageSize
+        })
+      }
+
+      setItems(response.content || [])
+      setTotalElements(response.totalElements || 0)
+      setTotalPages(response.totalPages || 0)
+      setHasNext(response.hasNext || false)
+      setHasPrevious(response.hasPrevious || false)
     } catch (error) {
       console.error('Error loading items:', error)
       showNotification(`${entityConfig.labelPlural} yüklenirken hata oluştu`, 'error')
       setItems([])
+      setTotalElements(0)
+      setTotalPages(0)
     } finally {
       setLoading(false)
     }
-  }
+  }, [apiHelpers, showAll, searchTerm, searchValues, currentPage, pageSize, entityConfig.labelPlural, entityConfig.searchFields])
 
   const loadDictionaries = async () => {
     try {
@@ -189,15 +256,8 @@ export default function EntityManagement({
     }
   }
 
-  // Client-side filtering (fallback for when backend doesn't support search yet)
-  const filteredItems = searchTerm
-    ? items.filter(item => {
-        const searchFields = entityConfig.searchFields || ['name', 'code']
-        return searchFields.some(field => 
-          item[field]?.toString().toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      })
-    : items // No client-side filtering if no search term (backend will handle it)
+  // Server-side filtering aktif, items doğrudan kullanılacak
+  const filteredItems = items
 
   const renderField = (field) => {
     const value = formData[field.name] || ''
@@ -321,14 +381,38 @@ export default function EntityManagement({
         </div>
 
         <div className="dictionary-toolbar">
-          <div className="search-box">
-            <input
-              type="text"
-              placeholder={`🔍 ${entityConfig.labelSingle} ara...`}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="search-input"
-            />
+          <div className="search-box-group">
+            {Array.isArray(entityConfig.searchFields) && entityConfig.searchFields.length > 0 ? (
+              entityConfig.searchFields.map((field) => (
+                <input
+                  key={field}
+                  type="text"
+                  placeholder={`🔍 ${field} ...`}
+                  value={searchValues[field] || ''}
+                  onChange={(e) => setSearchValues({ ...searchValues, [field]: e.target.value })}
+                  className="search-input"
+                  style={{ flex: 1 }}
+                />
+              ))
+            ) : (
+              <input
+                type="text"
+                placeholder={`🔍 ${entityConfig.labelSingle} ara...`}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="search-input"
+                style={{ flex: 2 }}
+              />
+            )}
+            {(searchTerm || (Object.values(searchValues).some(v => (v || '').toString().trim() !== ''))) && (
+              <button
+                className="btn-clear-search"
+                onClick={() => { setSearchTerm(''); setSearchValues(Object.fromEntries((entityConfig.searchFields||[]).map(f => [f, '']))); }}
+                title="Aramayı temizle"
+              >
+                ✕
+              </button>
+            )}
           </div>
           <div className="toolbar-filters">
             <label className="filter-checkbox-label">
@@ -345,8 +429,9 @@ export default function EntityManagement({
           </div>
           <div className="toolbar-info">
             <span className="item-count">
-              {items.length} kayıt
-              {showAll && <span className="inactive-badge"> (arşiv dahil)</span>}
+              Toplam {totalElements} kayıt
+              {totalElements > 0 && ` (Sayfa ${currentPage + 1} / ${totalPages})`}
+              {showAll && <span className="inactive-badge"> arşiv dahil</span>}
             </span>
           </div>
         </div>
@@ -413,6 +498,94 @@ export default function EntityManagement({
                 )}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {!loading && totalElements > 0 && (
+          <div className="pagination-container">
+            <div className="pagination-info">
+              Gösterilen: {items.length === 0 ? 0 : (currentPage * pageSize) + 1}-{Math.min((currentPage + 1) * pageSize, totalElements)} / {totalElements}
+            </div>
+            
+            <div className="pagination-controls">
+              <button
+                className="pagination-btn"
+                onClick={() => setCurrentPage(0)}
+                disabled={!hasPrevious}
+                title="İlk sayfa"
+              >
+                ⏮
+              </button>
+              <button
+                className="pagination-btn"
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={!hasPrevious}
+                title="Önceki sayfa"
+              >
+                ◀
+              </button>
+              
+              <div className="pagination-pages">
+                {Array.from({ length: totalPages }, (_, i) => {
+                  const showPage = (
+                    i === 0 ||
+                    i === totalPages - 1 ||
+                    (i >= currentPage - 1 && i <= currentPage + 1)
+                  )
+                  if (!showPage) {
+                    if (i === currentPage - 2 || i === currentPage + 2) {
+                      return <span key={i} className="pagination-ellipsis">...</span>
+                    }
+                    return null
+                  }
+                  return (
+                    <button
+                      key={i}
+                      className={`pagination-page ${i === currentPage ? 'active' : ''}`}
+                      onClick={() => setCurrentPage(i)}
+                    >
+                      {i + 1}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <button
+                className="pagination-btn"
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={!hasNext}
+                title="Sonraki sayfa"
+              >
+                ▶
+              </button>
+              <button
+                className="pagination-btn"
+                onClick={() => setCurrentPage(totalPages - 1)}
+                disabled={!hasNext}
+                title="Son sayfa"
+              >
+                ⏭
+              </button>
+            </div>
+
+            <div className="pagination-size-selector">
+              <label htmlFor="pageSize">Sayfa başına:</label>
+              <select
+                id="pageSize"
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value))
+                  setCurrentPage(0)
+                }}
+                className="page-size-select"
+              >
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </div>
           </div>
         )}
       </div>

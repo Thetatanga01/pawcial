@@ -9,10 +9,11 @@ const API_BASE_URL = 'http://localhost:8000/api';
 export function createApiHelpers(endpoint) {
   return {
     /**
-     * Get all items with optional filters
+     * Get items with optional filters and pagination
      * @param {Object} options - Query options
      * @param {boolean} options.all - Include archived/inactive items (default: false)
-     * @param {string} options.search - Search term for filtering
+     * @param {number} options.page - Page number (default: 0)
+     * @param {number} options.size - Page size (default: 20)
      */
     async getAll(options = {}) {
       try {
@@ -22,8 +23,11 @@ export function createApiHelpers(endpoint) {
         if (options.all) {
           params.append('all', 'true');
         }
-        if (options.search && options.search.trim()) {
-          params.append('search', options.search.trim());
+        if (options.page !== undefined) {
+          params.append('page', String(options.page));
+        }
+        if (options.size !== undefined) {
+          params.append('size', String(options.size));
         }
         
         const queryString = params.toString();
@@ -31,7 +35,7 @@ export function createApiHelpers(endpoint) {
           ? `${API_BASE_URL}/${endpoint}?${queryString}`
           : `${API_BASE_URL}/${endpoint}`;
         
-        console.log(`Fetching all ${endpoint}:`, url);
+        console.log(`Fetching ${endpoint} (paged):`, url);
         const response = await fetch(url);
         
         if (!response.ok) {
@@ -39,10 +43,74 @@ export function createApiHelpers(endpoint) {
         }
         
         const data = await response.json();
-        console.log(`Fetched ${data.length} ${endpoint} items`);
-        return data;
+        console.log(`Fetched ${endpoint} page`, {
+          page: data.page,
+          size: data.size,
+          totalElements: data.totalElements,
+          totalPages: data.totalPages,
+          contentLength: data.content?.length
+        });
+        return data; // { content, page, size, totalElements, totalPages, hasNext, hasPrevious }
       } catch (error) {
         console.error(`Error fetching ${endpoint}:`, error);
+        throw error;
+      }
+    },
+
+    /**
+     * Search endpoint with pagination
+     * @param {Object} params
+     * @param {string} params.search - generic search term (backend should map it)
+     * @param {boolean} params.all - include inactive
+     * @param {number} params.page - page number
+     * @param {number} params.size - page size
+     * @param {Object} [extra] - extra query params (key/value) for entity-specific fields
+     */
+    async search(params = {}, extra = {}) {
+      try {
+        const queryParams = new URLSearchParams();
+
+        if (params.search && params.search.trim()) {
+          queryParams.append('search', params.search.trim());
+        }
+        if (params.all) {
+          queryParams.append('all', 'true');
+        }
+        if (params.page !== undefined) {
+          queryParams.append('page', String(params.page));
+        }
+        if (params.size !== undefined) {
+          queryParams.append('size', String(params.size));
+        }
+        // append extra params if provided
+        Object.entries(extra || {}).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && String(value).trim() !== '') {
+            queryParams.append(key, String(value));
+          }
+        });
+
+        const queryString = queryParams.toString();
+        const url = queryString
+          ? `${API_BASE_URL}/${endpoint}/search?${queryString}`
+          : `${API_BASE_URL}/${endpoint}/search`;
+
+        console.log(`Searching ${endpoint} (paged):`, url);
+        const response = await fetch(url);
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+        }
+        const data = await response.json();
+        console.log(`Search ${endpoint} page`, {
+          page: data.page,
+          size: data.size,
+          totalElements: data.totalElements,
+          totalPages: data.totalPages,
+          contentLength: data.content?.length
+        });
+        return data;
+      } catch (error) {
+        console.error(`Error searching ${endpoint}:`, error);
         throw error;
       }
     },

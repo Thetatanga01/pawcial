@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { getAnimals, createAnimal, updateAnimal, deleteAnimal } from '../api/animals.js'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { getAnimals, createAnimal, updateAnimal, deleteAnimal, searchAnimals } from '../api/animals.js'
 import { getDictionaryItems } from '../api/dictionary.js'
 
 export default function AnimalManagement() {
@@ -7,10 +7,25 @@ export default function AnimalManagement() {
   const [loading, setLoading] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingAnimal, setEditingAnimal] = useState(null)
-  const [searchTerm, setSearchTerm] = useState('')
   const [showAll, setShowAll] = useState(false) // Backend'in 'all' parametresi
   const [notification, setNotification] = useState(null)
   const [confirmModal, setConfirmModal] = useState(null) // { title, message, onConfirm, confirmText, type, isActive }
+  
+  // Search filters
+  const [searchName, setSearchName] = useState('')
+  const [searchSpecies, setSearchSpecies] = useState('')
+  const [searchBreed, setSearchBreed] = useState('')
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(0)
+  const [pageSize, setPageSize] = useState(20)
+  const [totalElements, setTotalElements] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
+  const [hasNext, setHasNext] = useState(false)
+  const [hasPrevious, setHasPrevious] = useState(false)
+  
+  // Debounce timer ref
+  const searchDebounceRef = useRef(null)
 
   // Dictionary states
   const [species, setSpecies] = useState([])
@@ -45,10 +60,73 @@ export default function AnimalManagement() {
     setTimeout(() => setNotification(null), 3000)
   }
 
-  // Load animals when showAll or searchTerm changes
+  // Load animals - checks if any search filter is active
+  const loadAnimals = useCallback(async () => {
+    setLoading(true)
+    try {
+      // Eğer herhangi bir search filtresi varsa /search endpoint'ini kullan
+      const hasSearchFilters = searchName.trim() || searchSpecies.trim() || searchBreed.trim()
+      
+      let response
+      if (hasSearchFilters) {
+        response = await searchAnimals({
+          name: searchName,
+          speciesName: searchSpecies,
+          breedName: searchBreed,
+          all: showAll,
+          page: currentPage,
+          size: pageSize
+        })
+      } else {
+        // Filtre yoksa normal getAnimals endpoint'i kullan
+        response = await getAnimals({ 
+          all: showAll,
+          page: currentPage,
+          size: pageSize
+        })
+      }
+      
+      // Pagination response yapısı: { content, page, size, totalElements, totalPages, hasNext, hasPrevious }
+      setAnimals(response.content || [])
+      setTotalElements(response.totalElements || 0)
+      setTotalPages(response.totalPages || 0)
+      setHasNext(response.hasNext || false)
+      setHasPrevious(response.hasPrevious || false)
+    } catch (error) {
+      console.error('Error loading animals:', error)
+      showNotification('Hayvanlar yüklenirken hata oluştu', 'error')
+      setAnimals([])
+      setTotalElements(0)
+      setTotalPages(0)
+    } finally {
+      setLoading(false)
+    }
+  }, [searchName, searchSpecies, searchBreed, showAll, currentPage, pageSize])
+
+  // Reset page to 0 when search filters change
   useEffect(() => {
-    loadAnimals()
-  }, [showAll, searchTerm])
+    setCurrentPage(0)
+  }, [searchName, searchSpecies, searchBreed, showAll])
+
+  // Debounce search - 600ms delay after user stops typing
+  useEffect(() => {
+    // Clear previous timer
+    if (searchDebounceRef.current) {
+      clearTimeout(searchDebounceRef.current)
+    }
+
+    // Set new timer - debounce only for search/filter changes, not for pagination
+    searchDebounceRef.current = setTimeout(() => {
+      loadAnimals()
+    }, 600)
+
+    // Cleanup
+    return () => {
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current)
+      }
+    }
+  }, [searchName, searchSpecies, searchBreed, showAll, currentPage, loadAnimals])
 
   // Load dictionary data
   useEffect(() => {
@@ -65,23 +143,6 @@ export default function AnimalManagement() {
       setBreeds([])
     }
   }, [formData.speciesId, allBreeds])
-
-  const loadAnimals = async () => {
-    setLoading(true)
-    try {
-      const data = await getAnimals({
-        all: showAll,
-        search: searchTerm
-      })
-      setAnimals(data)
-    } catch (error) {
-      console.error('Error loading animals:', error)
-      showNotification('Hayvanlar yüklenirken hata oluştu', 'error')
-      setAnimals([])
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const loadDictionaries = async () => {
     try {
@@ -268,14 +329,7 @@ export default function AnimalManagement() {
     }
   }
 
-  // Client-side filtering (fallback for when backend doesn't support search yet)
-  const filteredAnimals = searchTerm 
-    ? animals.filter(animal =>
-        animal.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        animal.speciesName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        animal.breedName?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : animals // No client-side filtering if no search term (backend will handle it)
+  // Artık filtering backend'de yapılıyor - animals direkt kullanılıyor // No client-side filtering if no search term (backend will handle it)
 
   return (
     <div className="dictionary-management">
@@ -296,14 +350,44 @@ export default function AnimalManagement() {
         </div>
 
         <div className="dictionary-toolbar">
-          <div className="search-box">
+          <div className="search-box-group">
             <input
               type="text"
-              placeholder="🔍 İsim, tür veya ırk ile ara..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="🐾 Hayvan adı..."
+              value={searchName}
+              onChange={(e) => setSearchName(e.target.value)}
               className="search-input"
+              style={{ flex: 2 }}
             />
+            <input
+              type="text"
+              placeholder="🦁 Tür (Köpek, Kedi...)"
+              value={searchSpecies}
+              onChange={(e) => setSearchSpecies(e.target.value)}
+              className="search-input"
+              style={{ flex: 1.5 }}
+            />
+            <input
+              type="text"
+              placeholder="🐕 Irk (Golden, Husky...)"
+              value={searchBreed}
+              onChange={(e) => setSearchBreed(e.target.value)}
+              className="search-input"
+              style={{ flex: 1.5 }}
+            />
+            {(searchName || searchSpecies || searchBreed) && (
+              <button
+                className="btn-clear-search"
+                onClick={() => {
+                  setSearchName('')
+                  setSearchSpecies('')
+                  setSearchBreed('')
+                }}
+                title="Aramayı temizle"
+              >
+                ✕
+              </button>
+            )}
           </div>
           <div className="toolbar-filters">
             <label className="filter-checkbox-label">
@@ -320,9 +404,13 @@ export default function AnimalManagement() {
           </div>
           <div className="toolbar-info">
             <span className="item-count">
-              {animals.length} kayıt
-              {showAll && <span className="inactive-badge"> (arşiv dahil)</span>}
+              Toplam {totalElements} kayıt
+              {totalElements > 0 && ` (Sayfa ${currentPage + 1} / ${totalPages})`}
+              {showAll && <span className="inactive-badge"> arşiv dahil</span>}
             </span>
+            {(searchName || searchSpecies || searchBreed) && (
+              <span className="search-indicator">🔍 Arama aktif</span>
+            )}
           </div>
         </div>
 
@@ -348,14 +436,14 @@ export default function AnimalManagement() {
                 </tr>
               </thead>
               <tbody>
-                {filteredAnimals.length === 0 ? (
+                {animals.length === 0 ? (
                   <tr>
                     <td colSpan="9" className="empty-state">
-                      {searchTerm ? 'Arama sonucu bulunamadı' : 'Henüz hayvan eklenmemiş'}
+                      {(searchName || searchSpecies || searchBreed) ? 'Arama sonucu bulunamadı' : 'Henüz hayvan eklenmemiş'}
                     </td>
                   </tr>
                 ) : (
-                  filteredAnimals.map((animal, index) => {
+                  animals.map((animal, index) => {
                     // Backend'den isActive artık kesin olarak geliyor ✅
                     const isActive = animal.isActive
                     return (
@@ -395,6 +483,98 @@ export default function AnimalManagement() {
                 )}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {!loading && totalElements > 0 && (
+          <div className="pagination-container">
+            <div className="pagination-info">
+              Gösterilen: {animals.length === 0 ? 0 : (currentPage * pageSize) + 1}-{Math.min((currentPage + 1) * pageSize, totalElements)} / {totalElements}
+            </div>
+            
+            <div className="pagination-controls">
+              <button
+                className="pagination-btn"
+                onClick={() => setCurrentPage(0)}
+                disabled={!hasPrevious}
+                title="İlk sayfa"
+              >
+                ⏮
+              </button>
+              <button
+                className="pagination-btn"
+                onClick={() => setCurrentPage(currentPage - 1)}
+                disabled={!hasPrevious}
+                title="Önceki sayfa"
+              >
+                ◀
+              </button>
+              
+              <div className="pagination-pages">
+                {Array.from({ length: totalPages }, (_, i) => {
+                  // Show only 5 pages at a time
+                  const showPage = (
+                    i === 0 || // First page
+                    i === totalPages - 1 || // Last page
+                    (i >= currentPage - 1 && i <= currentPage + 1) // Current page ±1
+                  )
+                  
+                  if (!showPage) {
+                    // Show ellipsis
+                    if (i === currentPage - 2 || i === currentPage + 2) {
+                      return <span key={i} className="pagination-ellipsis">...</span>
+                    }
+                    return null
+                  }
+                  
+                  return (
+                    <button
+                      key={i}
+                      className={`pagination-page ${i === currentPage ? 'active' : ''}`}
+                      onClick={() => setCurrentPage(i)}
+                    >
+                      {i + 1}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <button
+                className="pagination-btn"
+                onClick={() => setCurrentPage(currentPage + 1)}
+                disabled={!hasNext}
+                title="Sonraki sayfa"
+              >
+                ▶
+              </button>
+              <button
+                className="pagination-btn"
+                onClick={() => setCurrentPage(totalPages - 1)}
+                disabled={!hasNext}
+                title="Son sayfa"
+              >
+                ⏭
+              </button>
+            </div>
+
+            <div className="pagination-size-selector">
+              <label htmlFor="pageSize">Sayfa başına:</label>
+              <select
+                id="pageSize"
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value))
+                  setCurrentPage(0) // Reset to first page
+                }}
+                className="page-size-select"
+              >
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </div>
           </div>
         )}
       </div>
