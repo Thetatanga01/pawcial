@@ -356,15 +356,18 @@ export default function AnimalManagement() {
       {/* Modal */}
       {isModalOpen && (
         <div className="modal-overlay-dict">
-          <div className="modal-dict modal-dict-large">
+          <div className="modal-dict modal-dict-xlarge">
             <div className="modal-dict-header">
-              <h3>{editingAnimal ? 'Hayvanı Düzenle' : 'Yeni Hayvan Ekle'}</h3>
+              <h3>{editingAnimal ? '🐾 Hayvanı Düzenle' : '🐾 Yeni Hayvan Ekle'}</h3>
               <button className="modal-close-btn" onClick={() => setIsModalOpen(false)}>
                 ✕
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="modal-dict-body">
-              <div className="form-grid-2">
+            <form onSubmit={handleSubmit} className="modal-dict-body modal-animal-form">
+              {/* Temel Bilgiler Bölümü */}
+              <div className="form-section">
+                <h4 className="form-section-title">ℹ️ Temel Bilgiler</h4>
+                <div className="form-grid-2">
                 {/* İsim */}
                 <div className="form-group-dict">
                   <label htmlFor="name">İsim *</label>
@@ -495,36 +498,6 @@ export default function AnimalManagement() {
                   </select>
                 </div>
 
-                {/* Kısırlaştırılmış */}
-                <div className="form-group-dict">
-                  <label htmlFor="sterilized">
-                    <input
-                      type="checkbox"
-                      id="sterilized"
-                      checked={formData.sterilized}
-                      onChange={(e) => setFormData({ ...formData, sterilized: e.target.checked })}
-                      className="form-checkbox"
-                      style={{ marginRight: '8px' }}
-                    />
-                    Kısırlaştırılmış
-                  </label>
-                </div>
-
-                {/* Melez */}
-                <div className="form-group-dict">
-                  <label htmlFor="isMixed">
-                    <input
-                      type="checkbox"
-                      id="isMixed"
-                      checked={formData.isMixed}
-                      onChange={(e) => setFormData({ ...formData, isMixed: e.target.checked })}
-                      className="form-checkbox"
-                      style={{ marginRight: '8px' }}
-                    />
-                    Melez
-                  </label>
-                </div>
-
                 {/* Doğum Tarihi */}
                 <div className="form-group-dict">
                   <label htmlFor="birthDate">Doğum Tarihi</label>
@@ -536,71 +509,117 @@ export default function AnimalManagement() {
                     className="form-input-dict"
                   />
                 </div>
+                </div>
+              </div>
+
+              {/* Özellikler Bölümü */}
+              <div className="form-section">
+                <h4 className="form-section-title">📋 Özellikler</h4>
+                <div className="checkbox-group">
+                  <div className="checkbox-item">
+                    <input
+                      type="checkbox"
+                      id="sterilized"
+                      checked={formData.sterilized}
+                      onChange={(e) => setFormData({ ...formData, sterilized: e.target.checked })}
+                      className="form-checkbox-modern"
+                    />
+                    <label htmlFor="sterilized" className="checkbox-label">
+                      <span className="checkbox-icon">✂️</span>
+                      <div className="checkbox-text">
+                        <strong>Kısırlaştırılmış</strong>
+                        <small>Hayvan kısırlaştırma ameliyatı geçirmiş</small>
+                      </div>
+                    </label>
+                  </div>
+
+                  <div className="checkbox-item">
+                    <input
+                      type="checkbox"
+                      id="isMixed"
+                      checked={formData.isMixed}
+                      onChange={(e) => setFormData({ ...formData, isMixed: e.target.checked })}
+                      className="form-checkbox-modern"
+                    />
+                    <label htmlFor="isMixed" className="checkbox-label">
+                      <span className="checkbox-icon">🧬</span>
+                      <div className="checkbox-text">
+                        <strong>Melez</strong>
+                        <small>Hayvan karma ırk</small>
+                      </div>
+                    </label>
+                  </div>
+                </div>
               </div>
 
               {/* Menşe Notu */}
-              <div className="form-group-dict">
-                <label htmlFor="originNote">Menşe Notu</label>
-                <textarea
-                  id="originNote"
-                  value={formData.originNote}
-                  onChange={(e) => setFormData({ ...formData, originNote: e.target.value })}
-                  placeholder="Hayvanın kökeni, nereden geldiği vb. bilgiler..."
-                  className="form-input-dict"
-                  rows="4"
-                />
+              <div className="form-section">
+                <h4 className="form-section-title">📝 Menşe Notu</h4>
+                <div className="form-group-dict">
+                  <textarea
+                    id="originNote"
+                    value={formData.originNote}
+                    onChange={(e) => setFormData({ ...formData, originNote: e.target.value })}
+                    placeholder="Hayvanın kökeni, nereden geldiği, bulunduğu koşullar vb. bilgiler..."
+                    className="form-input-dict"
+                    rows="3"
+                  />
+                </div>
               </div>
 
-              {/* Grid for multi-selects */}
-              <div className="form-grid-2">
-                {/* Mizaç - Multi Select */}
-                <div className="form-group-dict">
-                  <label htmlFor="temperamentCodes">Mizaç (Çoklu Seçim)</label>
-                  <select
-                    id="temperamentCodes"
-                    multiple
-                    value={formData.temperamentCodes}
-                    onChange={(e) => {
-                      const selectedOptions = Array.from(e.target.selectedOptions, option => option.value)
-                      setFormData({ ...formData, temperamentCodes: selectedOptions })
-                    }}
-                    className="form-input-dict form-input-multiselect"
-                    size={5}
-                  >
-                    {temperaments.map((item) => (
-                      <option key={item.code} value={item.code}>
-                        {item.label}
-                      </option>
-                    ))}
-                  </select>
-                  <small className="form-hint">
-                    Birden fazla seçim için Ctrl (Windows) veya Cmd (Mac) tuşuna basılı tutun
-                  </small>
-                </div>
+              {/* Davranış ve Sağlık Bölümü */}
+              <div className="form-section">
+                <h4 className="form-section-title">🩺 Davranış ve Sağlık</h4>
+                <div className="form-grid-2">
+                  {/* Mizaç - Multi Select */}
+                  <div className="form-group-dict">
+                    <label htmlFor="temperamentCodes">🐕 Mizaç</label>
+                    <select
+                      id="temperamentCodes"
+                      multiple
+                      value={formData.temperamentCodes}
+                      onChange={(e) => {
+                        const selectedOptions = Array.from(e.target.selectedOptions, option => option.value)
+                        setFormData({ ...formData, temperamentCodes: selectedOptions })
+                      }}
+                      className="form-input-dict form-input-multiselect"
+                      size={6}
+                    >
+                      {temperaments.map((item) => (
+                        <option key={item.code} value={item.code}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
+                    <small className="form-hint-multiselect">
+                      💡 Birden fazla seçim için Ctrl/Cmd tuşuna basılı tutun
+                    </small>
+                  </div>
 
-                {/* Sağlık Durumu - Multi Select */}
-                <div className="form-group-dict">
-                  <label htmlFor="healthFlagCodes">Sağlık Durumu (Çoklu Seçim)</label>
-                  <select
-                    id="healthFlagCodes"
-                    multiple
-                    value={formData.healthFlagCodes}
-                    onChange={(e) => {
-                      const selectedOptions = Array.from(e.target.selectedOptions, option => option.value)
-                      setFormData({ ...formData, healthFlagCodes: selectedOptions })
-                    }}
-                    className="form-input-dict form-input-multiselect"
-                    size={5}
-                  >
-                    {healthFlags.map((item) => (
-                      <option key={item.code} value={item.code}>
-                        {item.label}
-                      </option>
-                    ))}
-                  </select>
-                  <small className="form-hint">
-                    Birden fazla seçim için Ctrl (Windows) veya Cmd (Mac) tuşuna basılı tutun
-                  </small>
+                  {/* Sağlık Durumu - Multi Select */}
+                  <div className="form-group-dict">
+                    <label htmlFor="healthFlagCodes">💊 Sağlık Durumu</label>
+                    <select
+                      id="healthFlagCodes"
+                      multiple
+                      value={formData.healthFlagCodes}
+                      onChange={(e) => {
+                        const selectedOptions = Array.from(e.target.selectedOptions, option => option.value)
+                        setFormData({ ...formData, healthFlagCodes: selectedOptions })
+                      }}
+                      className="form-input-dict form-input-multiselect"
+                      size={6}
+                    >
+                      {healthFlags.map((item) => (
+                        <option key={item.code} value={item.code}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
+                    <small className="form-hint-multiselect">
+                      💡 Birden fazla seçim için Ctrl/Cmd tuşuna basılı tutun
+                    </small>
+                  </div>
                 </div>
               </div>
 

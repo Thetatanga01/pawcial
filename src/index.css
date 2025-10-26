@@ -1383,6 +1383,13 @@ body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto
   overflow-y: auto;
 }
 
+.modal-dict-xlarge {
+  max-width: 1000px;
+  width: 95%;
+  max-height: 92vh;
+  overflow-y: auto;
+}
+
 .modal-dict-header {
   padding: 1.5rem 2rem;
   border-bottom: 1px solid #e5e7eb;
@@ -1425,12 +1432,12 @@ body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto
 .form-grid-2 {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
-  margin-bottom: 1.5rem;
+  gap: 1rem;
+  margin-bottom: 0;
 }
 
 .form-group-dict {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
 }
 
 .form-group-dict label {
@@ -1648,7 +1655,160 @@ body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto
     gap: 1rem;
   }
 
-  .modal-dict-large {
+  .modal-dict-large,
+  .modal-dict-xlarge {
     max-width: 100%;
+    width: 100%;
+    max-height: 95vh;
   }
+
+  .checkbox-group {
+    flex-direction: column;
+  }
+}
+
+/* Animal Management Form Styles */
+.modal-animal-form {
+  padding: 1.25rem;
+}
+
+.form-section {
+  margin-bottom: 1.5rem;
+  padding: 1.25rem;
+  background: #f9fafb;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+}
+
+.form-section-title {
+  margin: 0 0 1rem 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  letter-spacing: -0.01em;
+}
+
+/* Modern Checkbox Styles */
+.checkbox-group {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.checkbox-item {
+  flex: 1;
+  min-width: 250px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 0.875rem 1rem;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.checkbox-item:hover {
+  border-color: var(--brand);
+  background: #fff4ef;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.1);
+}
+
+.checkbox-item:has(input:checked) {
+  border-color: var(--brand);
+  background: linear-gradient(135deg, #fff4ef 0%, #ffe8dc 100%);
+  box-shadow: 0 4px 16px rgba(255, 107, 53, 0.15);
+}
+
+.form-checkbox-modern {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  cursor: pointer;
+  margin-top: 2px;
+  accent-color: var(--brand);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  flex: 1;
+}
+
+.checkbox-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.checkbox-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.checkbox-text strong {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  display: block;
+}
+
+.checkbox-text small {
+  font-size: 13px;
+  color: #6b7280;
+  display: block;
+  line-height: 1.4;
+}
+
+/* Multi-select hint styling */
+.form-hint-multiselect {
+  display: block;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #92400e;
+  font-weight: 500;
+}
+
+/* Enhanced multi-select styling */
+.form-input-multiselect {
+  min-height: 140px !important;
+  padding: 8px !important;
+  border: 2px solid #e5e7eb !important;
+  border-radius: 10px !important;
+  transition: all 0.2s ease;
+}
+
+.form-input-multiselect:focus {
+  border-color: var(--brand) !important;
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.1) !important;
+  outline: none !important;
+}
+
+.form-input-multiselect option {
+  padding: 10px 12px !important;
+  margin: 3px 0 !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  font-weight: 500;
+}
+
+.form-input-multiselect option:checked {
+  background: linear-gradient(135deg, var(--brand) 0%, #ff8c66 100%) !important;
+  color: white !important;
+  font-weight: 600 !important;
+}
+
+.form-input-multiselect option:hover {
+  background: #fff4ef !important;
 }
