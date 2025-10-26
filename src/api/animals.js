@@ -2,12 +2,30 @@
 const API_BASE_URL = 'http://localhost:8000/api';
 
 /**
- * Get all animals
+ * Get all animals with optional filters
+ * @param {Object} options - Query options
+ * @param {boolean} options.all - Include archived/inactive animals (default: false)
+ * @param {string} options.search - Search term for filtering
  */
-export async function getAnimals() {
+export async function getAnimals(options = {}) {
   try {
-    console.log('Fetching animals from:', `${API_BASE_URL}/animals`);
-    const response = await fetch(`${API_BASE_URL}/animals`);
+    const params = new URLSearchParams();
+    
+    // Add query parameters if provided
+    if (options.all) {
+      params.append('all', 'true');
+    }
+    if (options.search && options.search.trim()) {
+      params.append('search', options.search.trim());
+    }
+    
+    const queryString = params.toString();
+    const url = queryString 
+      ? `${API_BASE_URL}/animals?${queryString}`
+      : `${API_BASE_URL}/animals`;
+    
+    console.log('Fetching animals from:', url);
+    const response = await fetch(url);
     
     console.log('Response status:', response.status);
     

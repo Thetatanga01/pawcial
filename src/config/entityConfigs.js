@@ -91,24 +91,18 @@ export const PERSON_CONFIG = {
   icon: '👤',
   labelSingle: 'Kişi',
   labelPlural: 'Kişiler',
-  description: 'Kişi kayıtlarını yönetin',
-  searchFields: ['firstName', 'lastName', 'email', 'phone'],
+  description: 'Kişi ve organizasyon bilgilerini yönetin',
+  searchFields: ['fullName', 'email', 'phone', 'organizationName'],
   formLayout: 'grid',
   
   fields: [
     {
-      name: 'firstName',
-      label: 'Ad',
+      name: 'fullName',
+      label: 'Ad Soyad / Tam Ad',
       type: 'text',
       required: true,
-      placeholder: 'Örn: Ahmet'
-    },
-    {
-      name: 'lastName',
-      label: 'Soyad',
-      type: 'text',
-      required: true,
-      placeholder: 'Örn: Yılmaz'
+      placeholder: 'Örn: Ahmet Yılmaz',
+      hint: 'Kişinin tam adı veya organizasyon adı'
     },
     {
       name: 'email',
@@ -122,13 +116,7 @@ export const PERSON_CONFIG = {
       label: 'Telefon',
       type: 'tel',
       required: false,
-      placeholder: '5XX XXX XX XX'
-    },
-    {
-      name: 'birthDate',
-      label: 'Doğum Tarihi',
-      type: 'date',
-      required: false
+      placeholder: '+90 5XX XXX XX XX'
     },
     {
       name: 'address',
@@ -136,23 +124,52 @@ export const PERSON_CONFIG = {
       type: 'textarea',
       required: false,
       fullWidth: true,
-      rows: 3
+      rows: 2,
+      placeholder: 'İletişim adresi...'
+    },
+    {
+      name: 'isOrganization',
+      label: 'Organizasyon mu?',
+      type: 'checkbox',
+      required: false,
+      hint: 'Bu kayıt bir organizasyon ise işaretleyin'
+    },
+    {
+      name: 'organizationName',
+      label: 'Organizasyon Adı',
+      type: 'text',
+      required: false,
+      placeholder: 'Örn: Hayvan Dostları Derneği',
+      hint: 'Organizasyon ise buraya adını girin'
+    },
+    {
+      name: 'organizationType',
+      label: 'Organizasyon Tipi',
+      type: 'text',
+      required: false,
+      placeholder: 'Örn: Dernek, Vakıf, NGO',
+      hint: 'Organizasyon türü'
+    },
+    {
+      name: 'notes',
+      label: 'Notlar',
+      type: 'textarea',
+      required: false,
+      fullWidth: true,
+      rows: 3,
+      placeholder: 'Kişi veya organizasyon hakkında ek bilgiler...'
     }
   ],
 
   tableColumns: [
-    { 
-      field: 'fullName', 
-      label: 'Ad Soyad', 
-      width: '25%',
-      render: (_, item) => `${item.firstName} ${item.lastName}`
-    },
-    { field: 'email', label: 'E-posta', width: '25%' },
-    { field: 'phone', label: 'Telefon', width: '20%' },
-    { field: 'birthDate', label: 'Doğum Tarihi', width: '15%' }
+    { field: 'fullName', label: 'Ad Soyad', width: '25%' },
+    { field: 'email', label: 'E-posta', width: '20%' },
+    { field: 'phone', label: 'Telefon', width: '15%' },
+    { field: 'organizationName', label: 'Organizasyon', width: '20%' },
+    { field: 'isOrganization', label: 'Org?', width: '10%', render: (value) => value ? '✓' : '✗' }
   ],
 
-  getDisplayName: (item) => `${item.firstName} ${item.lastName}`
+  getDisplayName: (item) => item.fullName || item.organizationName || 'İsimsiz'
 };
 
 export const VOLUNTEER_CONFIG = {

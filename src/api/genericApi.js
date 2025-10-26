@@ -8,10 +8,31 @@ const API_BASE_URL = 'http://localhost:8000/api';
  */
 export function createApiHelpers(endpoint) {
   return {
-    async getAll() {
+    /**
+     * Get all items with optional filters
+     * @param {Object} options - Query options
+     * @param {boolean} options.all - Include archived/inactive items (default: false)
+     * @param {string} options.search - Search term for filtering
+     */
+    async getAll(options = {}) {
       try {
-        console.log(`Fetching all ${endpoint}:`, `${API_BASE_URL}/${endpoint}`);
-        const response = await fetch(`${API_BASE_URL}/${endpoint}`);
+        const params = new URLSearchParams();
+        
+        // Add query parameters if provided
+        if (options.all) {
+          params.append('all', 'true');
+        }
+        if (options.search && options.search.trim()) {
+          params.append('search', options.search.trim());
+        }
+        
+        const queryString = params.toString();
+        const url = queryString 
+          ? `${API_BASE_URL}/${endpoint}?${queryString}`
+          : `${API_BASE_URL}/${endpoint}`;
+        
+        console.log(`Fetching all ${endpoint}:`, url);
+        const response = await fetch(url);
         
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);

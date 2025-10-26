@@ -14,7 +14,9 @@ export default function EntityManagement({
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [showAll, setShowAll] = useState(false) // Backend'in 'all' parametresi
   const [notification, setNotification] = useState(null)
+  const [confirmModal, setConfirmModal] = useState(null) // { title, message, onConfirm, confirmText, type, icon }
   const [dictionaries, setDictionaries] = useState({})
 
   // Form data
@@ -31,10 +33,10 @@ export default function EntityManagement({
     setTimeout(() => setNotification(null), 3000)
   }
 
-  // Load items
+  // Load items when showAll or searchTerm changes
   useEffect(() => {
     loadItems()
-  }, [])
+  }, [showAll, searchTerm])
 
   // Load dictionaries
   useEffect(() => {
@@ -44,7 +46,10 @@ export default function EntityManagement({
   const loadItems = async () => {
     setLoading(true)
     try {
-      const data = await apiHelpers.getAll()
+      const data = await apiHelpers.getAll({
+        all: showAll,
+        search: searchTerm
+      })
       setItems(data || [])
     } catch (error) {
       console.error('Error loading items:', error)
@@ -135,18 +140,32 @@ export default function EntityManagement({
     setIsModalOpen(true)
   }
 
-  const handleDelete = async (item) => {
+  const handleToggleActive = (item) => {
+    // Backend'de DELETE endpoint artık toggle olarak çalışıyor
     const itemName = entityConfig.getDisplayName ? entityConfig.getDisplayName(item) : item.id
-    if (!confirm(`"${itemName}" kaydını silmek istediğinizden emin misiniz?`)) return
-
-    try {
-      await apiHelpers.delete(item.id)
-      showNotification(`${entityConfig.labelSingle} başarıyla silindi!`, 'success')
-      loadItems()
-    } catch (error) {
-      console.error('Error deleting item:', error)
-      showNotification('Silme işlemi başarısız: ' + error.message, 'error')
-    }
+    const isCurrentlyActive = item.isActive
+    const action = isCurrentlyActive ? 'arşivlemek' : 'tekrar aktif etmek'
+    const actionPast = isCurrentlyActive ? 'arşivlendi' : 'aktif edildi'
+    const icon = isCurrentlyActive ? '📦' : '✅'
+    const modalType = isCurrentlyActive ? 'warning' : 'success'
+    
+    setConfirmModal({
+      title: isCurrentlyActive ? 'Kaydı Arşivle' : 'Kaydı Aktif Et',
+      message: `"${itemName}" kaydını ${action} istediğinizden emin misiniz?`,
+      icon: icon,
+      type: modalType,
+      confirmText: isCurrentlyActive ? 'Arşivle' : 'Aktif Et',
+      onConfirm: async () => {
+        try {
+          await apiHelpers.delete(item.id) // Backend'de toggle olarak çalışıyor
+          showNotification(`${entityConfig.labelSingle} başarıyla ${actionPast}!`, 'success')
+          loadItems()
+        } catch (error) {
+          console.error('Error toggling item active status:', error)
+          showNotification('İşlem başarısız: ' + error.message, 'error')
+        }
+      }
+    })
   }
 
   const handleSubmit = async (e) => {
@@ -170,13 +189,15 @@ export default function EntityManagement({
     }
   }
 
-  const filteredItems = items.filter(item => {
-    if (!searchTerm) return true
-    const searchFields = entityConfig.searchFields || ['name', 'code']
-    return searchFields.some(field => 
-      item[field]?.toString().toLowerCase().includes(searchTerm.toLowerCase())
-    )
-  })
+  // Client-side filtering (fallback for when backend doesn't support search yet)
+  const filteredItems = searchTerm
+    ? items.filter(item => {
+        const searchFields = entityConfig.searchFields || ['name', 'code']
+        return searchFields.some(field => 
+          item[field]?.toString().toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      })
+    : items // No client-side filtering if no search term (backend will handle it)
 
   const renderField = (field) => {
     const value = formData[field.name] || ''
@@ -303,14 +324,30 @@ export default function EntityManagement({
           <div className="search-box">
             <input
               type="text"
-              placeholder={`${entityConfig.labelSingle} ara...`}
+              placeholder={`🔍 ${entityConfig.labelSingle} ara...`}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-input"
             />
           </div>
+          <div className="toolbar-filters">
+            <label className="filter-checkbox-label">
+              <input
+                type="checkbox"
+                checked={showAll}
+                onChange={(e) => setShowAll(e.target.checked)}
+                className="filter-checkbox"
+              />
+              <span className="filter-checkbox-text">
+                📦 Arşivlenmişleri de göster
+              </span>
+            </label>
+          </div>
           <div className="toolbar-info">
-            <span className="item-count">{filteredItems.length} kayıt</span>
+            <span className="item-count">
+              {items.length} kayıt
+              {showAll && <span className="inactive-badge"> (arşiv dahil)</span>}
+            </span>
           </div>
         </div>
 
@@ -341,34 +378,38 @@ export default function EntityManagement({
                     </td>
                   </tr>
                 ) : (
-                  filteredItems.map((item, index) => (
-                    <tr key={item.id}>
-                      <td>{index + 1}</td>
-                      {entityConfig.tableColumns.map((col, idx) => (
-                        <td key={idx}>
-                          {col.render ? col.render(item[col.field], item) : (item[col.field] || '-')}
+                  filteredItems.map((item, index) => {
+                    const isActive = item.isActive
+                    return (
+                      <tr key={item.id} className={!isActive ? 'row-inactive' : ''}>
+                        <td>{index + 1}</td>
+                        {entityConfig.tableColumns.map((col, idx) => (
+                          <td key={idx}>
+                            {col.render ? col.render(item[col.field], item) : (item[col.field] || '-')}
+                            {idx === 0 && !isActive && <span className="badge-archived">Arşiv</span>}
+                          </td>
+                        ))}
+                        <td>
+                          <div className="action-buttons">
+                            <button
+                              className="action-btn edit"
+                              onClick={() => handleEdit(item)}
+                              title="Düzenle"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              className="action-btn delete"
+                              onClick={() => handleToggleActive(item)}
+                              title="Arşivle / Aktif Et (Toggle)"
+                            >
+                              🔄
+                            </button>
+                          </div>
                         </td>
-                      ))}
-                      <td>
-                        <div className="action-buttons">
-                          <button
-                            className="action-btn edit"
-                            onClick={() => handleEdit(item)}
-                            title="Düzenle"
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            className="action-btn delete"
-                            onClick={() => handleDelete(item)}
-                            title="Sil"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                      </tr>
+                    )
+                  })
                 )}
               </tbody>
             </table>
@@ -426,6 +467,40 @@ export default function EntityManagement({
               {notification.type === 'success' ? '✓' : '✕'}
             </span>
             <span className="notification-message">{notification.message}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmModal && (
+        <div className="modal-overlay-confirm">
+          <div className={`modal-confirm modal-confirm-${confirmModal.type}`}>
+            <div className="modal-confirm-header">
+              <span className="modal-confirm-icon">{confirmModal.icon}</span>
+              <h3 className="modal-confirm-title">{confirmModal.title}</h3>
+            </div>
+            <div className="modal-confirm-body">
+              <p className="modal-confirm-message">{confirmModal.message}</p>
+            </div>
+            <div className="modal-confirm-footer">
+              <button 
+                type="button" 
+                className="btn-confirm-cancel" 
+                onClick={() => setConfirmModal(null)}
+              >
+                İptal
+              </button>
+              <button 
+                type="button" 
+                className={`btn-confirm-action btn-confirm-${confirmModal.type}`}
+                onClick={() => {
+                  if (confirmModal.onConfirm) confirmModal.onConfirm()
+                  setConfirmModal(null)
+                }}
+              >
+                {confirmModal.confirmText}
+              </button>
+            </div>
           </div>
         </div>
       )}

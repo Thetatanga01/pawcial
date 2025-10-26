@@ -8,7 +8,9 @@ export default function AnimalManagement() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingAnimal, setEditingAnimal] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [showAll, setShowAll] = useState(false) // Backend'in 'all' parametresi
   const [notification, setNotification] = useState(null)
+  const [confirmModal, setConfirmModal] = useState(null) // { title, message, onConfirm, confirmText, type, isActive }
 
   // Dictionary states
   const [species, setSpecies] = useState([])
@@ -43,10 +45,10 @@ export default function AnimalManagement() {
     setTimeout(() => setNotification(null), 3000)
   }
 
-  // Load animals
+  // Load animals when showAll or searchTerm changes
   useEffect(() => {
     loadAnimals()
-  }, [])
+  }, [showAll, searchTerm])
 
   // Load dictionary data
   useEffect(() => {
@@ -67,7 +69,10 @@ export default function AnimalManagement() {
   const loadAnimals = async () => {
     setLoading(true)
     try {
-      const data = await getAnimals()
+      const data = await getAnimals({
+        all: showAll,
+        search: searchTerm
+      })
       setAnimals(data)
     } catch (error) {
       console.error('Error loading animals:', error)
@@ -209,17 +214,32 @@ export default function AnimalManagement() {
     })
   }
 
-  const handleDelete = async (animal) => {
-    if (!confirm(`"${animal.name}" adlı hayvanı silmek istediğinizden emin misiniz?`)) return
-
-    try {
-      await deleteAnimal(animal.id)
-      showNotification('Hayvan başarıyla silindi!', 'success')
-      loadAnimals()
-    } catch (error) {
-      console.error('Error deleting animal:', error)
-      showNotification('Silme işlemi başarısız: ' + error.message, 'error')
-    }
+  const handleToggleActive = (animal) => {
+    // Backend'de DELETE endpoint artık toggle olarak çalışıyor
+    // Backend'den isActive bilgisi artık geliyor ✅
+    const isCurrentlyActive = animal.isActive
+    const action = isCurrentlyActive ? 'arşivlemek' : 'tekrar aktif etmek'
+    const actionPast = isCurrentlyActive ? 'arşivlendi' : 'aktif edildi'
+    const icon = isCurrentlyActive ? '📦' : '✅'
+    const modalType = isCurrentlyActive ? 'warning' : 'success'
+    
+    setConfirmModal({
+      title: isCurrentlyActive ? 'Kaydı Arşivle' : 'Kaydı Aktif Et',
+      message: `"${animal.name}" adlı hayvanı ${action} istediğinizden emin misiniz?`,
+      icon: icon,
+      type: modalType,
+      confirmText: isCurrentlyActive ? 'Arşivle' : 'Aktif Et',
+      onConfirm: async () => {
+        try {
+          await deleteAnimal(animal.id) // Backend'de toggle olarak çalışıyor
+          showNotification(`Hayvan başarıyla ${actionPast}!`, isCurrentlyActive ? 'success' : 'success')
+          loadAnimals()
+        } catch (error) {
+          console.error('Error toggling animal active status:', error)
+          showNotification('İşlem başarısız: ' + error.message, 'error')
+        }
+      }
+    })
   }
 
   const handleSubmit = async (e) => {
@@ -248,11 +268,14 @@ export default function AnimalManagement() {
     }
   }
 
-  const filteredAnimals = animals.filter(animal =>
-    animal.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    animal.speciesName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    animal.breedName?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  // Client-side filtering (fallback for when backend doesn't support search yet)
+  const filteredAnimals = searchTerm 
+    ? animals.filter(animal =>
+        animal.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        animal.speciesName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        animal.breedName?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : animals // No client-side filtering if no search term (backend will handle it)
 
   return (
     <div className="dictionary-management">
@@ -276,14 +299,30 @@ export default function AnimalManagement() {
           <div className="search-box">
             <input
               type="text"
-              placeholder="İsim veya tür ile ara..."
+              placeholder="🔍 İsim, tür veya ırk ile ara..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="search-input"
             />
           </div>
+          <div className="toolbar-filters">
+            <label className="filter-checkbox-label">
+              <input
+                type="checkbox"
+                checked={showAll}
+                onChange={(e) => setShowAll(e.target.checked)}
+                className="filter-checkbox"
+              />
+              <span className="filter-checkbox-text">
+                📦 Arşivlenmişleri de göster
+              </span>
+            </label>
+          </div>
           <div className="toolbar-info">
-            <span className="item-count">{filteredAnimals.length} kayıt</span>
+            <span className="item-count">
+              {animals.length} kayıt
+              {showAll && <span className="inactive-badge"> (arşiv dahil)</span>}
+            </span>
           </div>
         </div>
 
@@ -316,36 +355,43 @@ export default function AnimalManagement() {
                     </td>
                   </tr>
                 ) : (
-                  filteredAnimals.map((animal, index) => (
-                    <tr key={animal.id}>
-                      <td>{index + 1}</td>
-                      <td><strong>{animal.name}</strong></td>
-                      <td>{animal.speciesName || '-'}</td>
-                      <td>{animal.breedName || '-'}</td>
-                      <td>{animal.sex || '-'}</td>
-                      <td>{animal.color || '-'}</td>
-                      <td>{animal.size || '-'}</td>
-                      <td>{animal.birthDate || '-'}</td>
-                      <td>
-                        <div className="action-buttons">
-                          <button
-                            className="action-btn edit"
-                            onClick={() => handleEdit(animal)}
-                            title="Düzenle"
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            className="action-btn delete"
-                            onClick={() => handleDelete(animal)}
-                            title="Sil"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                  filteredAnimals.map((animal, index) => {
+                    // Backend'den isActive artık kesin olarak geliyor ✅
+                    const isActive = animal.isActive
+                    return (
+                      <tr key={animal.id} className={!isActive ? 'row-inactive' : ''}>
+                        <td>{index + 1}</td>
+                        <td>
+                          <strong>{animal.name}</strong>
+                          {!isActive && <span className="badge-archived">Arşiv</span>}
+                        </td>
+                        <td>{animal.speciesName || '-'}</td>
+                        <td>{animal.breedName || '-'}</td>
+                        <td>{animal.sex || '-'}</td>
+                        <td>{animal.color || '-'}</td>
+                        <td>{animal.size || '-'}</td>
+                        <td>{animal.birthDate || '-'}</td>
+                        <td>
+                          <div className="action-buttons">
+                            <button
+                              className="action-btn edit"
+                              onClick={() => handleEdit(animal)}
+                              title="Düzenle"
+                            >
+                              ✏️
+                            </button>
+                            <button
+                              className="action-btn delete"
+                              onClick={() => handleToggleActive(animal)}
+                              title="Arşivle / Aktif Et (Toggle)"
+                            >
+                              🔄
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })
                 )}
               </tbody>
             </table>
@@ -644,6 +690,40 @@ export default function AnimalManagement() {
               {notification.type === 'success' ? '✓' : '✕'}
             </span>
             <span className="notification-message">{notification.message}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmModal && (
+        <div className="modal-overlay-confirm">
+          <div className={`modal-confirm modal-confirm-${confirmModal.type}`}>
+            <div className="modal-confirm-header">
+              <span className="modal-confirm-icon">{confirmModal.icon}</span>
+              <h3 className="modal-confirm-title">{confirmModal.title}</h3>
+            </div>
+            <div className="modal-confirm-body">
+              <p className="modal-confirm-message">{confirmModal.message}</p>
+            </div>
+            <div className="modal-confirm-footer">
+              <button 
+                type="button" 
+                className="btn-confirm-cancel" 
+                onClick={() => setConfirmModal(null)}
+              >
+                İptal
+              </button>
+              <button 
+                type="button" 
+                className={`btn-confirm-action btn-confirm-${confirmModal.type}`}
+                onClick={() => {
+                  if (confirmModal.onConfirm) confirmModal.onConfirm()
+                  setConfirmModal(null)
+                }}
+              >
+                {confirmModal.confirmText}
+              </button>
+            </div>
           </div>
         </div>
       )}
