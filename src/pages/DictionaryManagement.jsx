@@ -21,6 +21,7 @@ const DICTIONARIES = [
   { id: 'hold-type', name: 'HoldType', label: 'Bekleme Tipi', icon: '⏸️', supportsUpdate: true },
   { id: 'med-event-type', name: 'MedEventType', label: 'Tıbbi Olay Tipi', icon: '🩺', supportsUpdate: true },
   { id: 'observation-category', name: 'ObservationCategory', label: 'Gözlem Kategorisi', icon: '👁️', supportsUpdate: true },
+  { id: 'organization', name: 'Organization', label: 'Organizasyon', icon: '🏛️', supportsUpdate: true },
   { id: 'outcome-type', name: 'OutcomeType', label: 'Sonuç Tipi', icon: '🎯', supportsUpdate: true },
   { id: 'placement-status', name: 'PlacementStatus', label: 'Yerleştirme Durumu', icon: '📍', supportsUpdate: true },
   { id: 'placement-type', name: 'PlacementType', label: 'Yerleştirme Tipi', icon: '🏡', supportsUpdate: true },
@@ -78,13 +79,39 @@ export default function DictionaryManagement() {
 
   const handleCreate = () => {
     setEditingItem(null)
-    setFormData({ code: '', label: '' })
+    // Organization için ek alanlar
+    if (selectedDictionary.id === 'organization') {
+      setFormData({ 
+        code: '', 
+        label: '', 
+        organizationType: '', 
+        contactPhone: '', 
+        contactEmail: '', 
+        address: '', 
+        notes: '' 
+      })
+    } else {
+      setFormData({ code: '', label: '' })
+    }
     setIsModalOpen(true)
   }
 
   const handleEdit = (item) => {
     setEditingItem(item)
-    setFormData({ code: item.code, label: item.label })
+    // Organization için ek alanlar
+    if (selectedDictionary.id === 'organization') {
+      setFormData({ 
+        code: item.code, 
+        label: item.label,
+        organizationType: item.organizationType || '',
+        contactPhone: item.contactPhone || '',
+        contactEmail: item.contactEmail || '',
+        address: item.address || '',
+        notes: item.notes || ''
+      })
+    } else {
+      setFormData({ code: item.code, label: item.label })
+    }
     setIsModalOpen(true)
   }
 
@@ -107,8 +134,22 @@ export default function DictionaryManagement() {
     
     try {
       if (editingItem) {
-        // Backend API entegrasyonu - Update (sadece label)
-        await updateDictionaryItem(selectedDictionary.id, editingItem.code, { label: formData.label })
+        // Backend API entegrasyonu - Update
+        if (selectedDictionary.id === 'organization') {
+          // Organization için tüm alanları güncelle
+          const updateData = {
+            label: formData.label,
+            organizationType: formData.organizationType,
+            contactPhone: formData.contactPhone,
+            contactEmail: formData.contactEmail,
+            address: formData.address,
+            notes: formData.notes
+          }
+          await updateDictionaryItem(selectedDictionary.id, editingItem.code, updateData)
+        } else {
+          // Diğer dictionary'ler için sadece label
+          await updateDictionaryItem(selectedDictionary.id, editingItem.code, { label: formData.label })
+        }
         showNotification('Kayıt başarıyla güncellendi!', 'success')
       } else {
         // Backend API entegrasyonu - Create
@@ -288,6 +329,72 @@ export default function DictionaryManagement() {
                 />
                 <small className="form-hint">Kullanıcı dostu açıklama</small>
               </div>
+
+              {/* Organization için ek alanlar */}
+              {selectedDictionary.id === 'organization' && (
+                <>
+                  <div className="form-group-dict">
+                    <label htmlFor="organizationType">Organizasyon Tipi</label>
+                    <input
+                      type="text"
+                      id="organizationType"
+                      value={formData.organizationType || ''}
+                      onChange={(e) => setFormData({ ...formData, organizationType: e.target.value })}
+                      placeholder="Örn: Dernek, Vakıf, Belediye"
+                      className="form-input-dict"
+                    />
+                  </div>
+
+                  <div className="form-group-dict">
+                    <label htmlFor="contactPhone">İletişim Telefonu</label>
+                    <input
+                      type="tel"
+                      id="contactPhone"
+                      value={formData.contactPhone || ''}
+                      onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
+                      placeholder="+90 5XX XXX XX XX"
+                      className="form-input-dict"
+                    />
+                  </div>
+
+                  <div className="form-group-dict">
+                    <label htmlFor="contactEmail">İletişim E-posta</label>
+                    <input
+                      type="email"
+                      id="contactEmail"
+                      value={formData.contactEmail || ''}
+                      onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
+                      placeholder="ornek@email.com"
+                      className="form-input-dict"
+                    />
+                  </div>
+
+                  <div className="form-group-dict">
+                    <label htmlFor="address">Adres</label>
+                    <textarea
+                      id="address"
+                      value={formData.address || ''}
+                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                      placeholder="Organizasyon adresi..."
+                      className="form-input-dict"
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="form-group-dict">
+                    <label htmlFor="notes">Notlar</label>
+                    <textarea
+                      id="notes"
+                      value={formData.notes || ''}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      placeholder="Ek bilgiler..."
+                      className="form-input-dict"
+                      rows={3}
+                    />
+                  </div>
+                </>
+              )}
+
               <div className="modal-dict-footer">
                 <button type="button" className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>
                   İptal

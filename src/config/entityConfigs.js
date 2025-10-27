@@ -91,7 +91,7 @@ export const PERSON_CONFIG = {
   icon: '👤',
   labelSingle: 'Kişi',
   labelPlural: 'Kişiler',
-  description: 'Kişi ve organizasyon bilgilerini yönetin',
+  description: 'Kişi bilgilerini yönetin',
   searchFields: ['fullName', 'email', 'phone', 'organizationName'],
   formLayout: 'grid',
   
@@ -102,7 +102,7 @@ export const PERSON_CONFIG = {
       type: 'text',
       required: true,
       placeholder: 'Örn: Ahmet Yılmaz',
-      hint: 'Kişinin tam adı veya organizasyon adı'
+      hint: 'Kişinin tam adı'
     },
     {
       name: 'email',
@@ -128,27 +128,12 @@ export const PERSON_CONFIG = {
       placeholder: 'İletişim adresi...'
     },
     {
-      name: 'isOrganization',
-      label: 'Organizasyon mu?',
-      type: 'checkbox',
+      name: 'organizationCode',
+      label: 'Organizasyon',
+      type: 'select',
+      dictionary: 'organization',
       required: false,
-      hint: 'Bu kayıt bir organizasyon ise işaretleyin'
-    },
-    {
-      name: 'organizationName',
-      label: 'Organizasyon Adı',
-      type: 'text',
-      required: false,
-      placeholder: 'Örn: Hayvan Dostları Derneği',
-      hint: 'Organizasyon ise buraya adını girin'
-    },
-    {
-      name: 'organizationType',
-      label: 'Organizasyon Tipi',
-      type: 'text',
-      required: false,
-      placeholder: 'Örn: Dernek, Vakıf, NGO',
-      hint: 'Organizasyon türü'
+      hint: 'Kişi bir organizasyona bağlıysa seçiniz'
     },
     {
       name: 'notes',
@@ -157,7 +142,7 @@ export const PERSON_CONFIG = {
       required: false,
       fullWidth: true,
       rows: 3,
-      placeholder: 'Kişi veya organizasyon hakkında ek bilgiler...'
+      placeholder: 'Kişi hakkında ek bilgiler...'
     }
   ],
 
@@ -165,11 +150,15 @@ export const PERSON_CONFIG = {
     { field: 'fullName', label: 'Ad Soyad', width: '25%' },
     { field: 'email', label: 'E-posta', width: '20%' },
     { field: 'phone', label: 'Telefon', width: '15%' },
-    { field: 'organizationName', label: 'Organizasyon', width: '20%' },
-    { field: 'isOrganization', label: 'Org?', width: '10%', render: (value) => value ? '✓' : '✗' }
+    { 
+      field: 'organization', 
+      label: 'Organizasyon', 
+      width: '25%',
+      render: (value) => value?.label || '-'
+    }
   ],
 
-  getDisplayName: (item) => item.fullName || item.organizationName || 'İsimsiz'
+  getDisplayName: (item) => item.fullName || 'İsimsiz'
 };
 
 export const VOLUNTEER_CONFIG = {

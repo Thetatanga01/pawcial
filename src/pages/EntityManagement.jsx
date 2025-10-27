@@ -200,7 +200,12 @@ export default function EntityManagement({
   const handleEdit = (item) => {
     setEditingItem(item)
     const editData = entityConfig.fields.reduce((acc, field) => {
-      acc[field.name] = item[field.name] || ''
+      // Özel mapping: organizationCode için organization.code kullan
+      if (field.name === 'organizationCode' && item.organization) {
+        acc[field.name] = item.organization.code || ''
+      } else {
+        acc[field.name] = item[field.name] || ''
+      }
       return acc
     }, {})
     setFormData(editData)
@@ -239,11 +244,17 @@ export default function EntityManagement({
     e.preventDefault()
 
     try {
+      // Boş string değerleri null'a çevir (backend için)
+      const cleanedData = Object.entries(formData).reduce((acc, [key, value]) => {
+        acc[key] = value === '' ? null : value
+        return acc
+      }, {})
+
       if (editingItem) {
-        await apiHelpers.update(editingItem.id, formData)
+        await apiHelpers.update(editingItem.id, cleanedData)
         showNotification(`${entityConfig.labelSingle} başarıyla güncellendi!`, 'success')
       } else {
-        await apiHelpers.create(formData)
+        await apiHelpers.create(cleanedData)
         showNotification(`${entityConfig.labelSingle} başarıyla eklendi!`, 'success')
       }
 

@@ -15,6 +15,7 @@ const DICTIONARY_ENDPOINTS = {
   'hold-type': 'hold-types',
   'med-event-type': 'med-event-types',
   'observation-category': 'observation-categories',
+  'organization': 'organizations',
   'outcome-type': 'outcome-types',
   'placement-status': 'placement-statuses',
   'placement-type': 'placement-types',
