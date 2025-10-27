@@ -223,7 +223,7 @@ export const FACILITY_CONFIG = {
   labelSingle: 'Tesis',
   labelPlural: 'Tesisler',
   description: 'Tesis kayıtlarını yönetin',
-  searchFields: ['name', 'facilityTypeCode', 'address'],
+  searchFields: ['name', 'type', 'city'],
   formLayout: 'grid',
   
   fields: [
@@ -235,24 +235,25 @@ export const FACILITY_CONFIG = {
       placeholder: 'Örn: Ana Bakım Merkezi'
     },
     {
-      name: 'facilityTypeCode',
+      name: 'type',
       label: 'Tesis Tipi',
       type: 'select',
       dictionary: 'facility-type',
-      required: true
-    },
-    {
-      name: 'capacity',
-      label: 'Kapasite',
-      type: 'number',
-      required: false,
-      placeholder: '0'
-    },
-    {
-      name: 'operationalDate',
-      label: 'Açılış Tarihi',
-      type: 'date',
       required: false
+    },
+    {
+      name: 'country',
+      label: 'Ülke',
+      type: 'text',
+      required: false,
+      placeholder: 'Örn: Turkey'
+    },
+    {
+      name: 'city',
+      label: 'Şehir',
+      type: 'text',
+      required: false,
+      placeholder: 'Örn: Istanbul'
     },
     {
       name: 'address',
@@ -266,9 +267,9 @@ export const FACILITY_CONFIG = {
 
   tableColumns: [
     { field: 'name', label: 'Tesis Adı', width: '30%' },
-    { field: 'facilityTypeCode', label: 'Tip', width: '20%' },
-    { field: 'capacity', label: 'Kapasite', width: '15%' },
-    { field: 'operationalDate', label: 'Açılış', width: '20%' }
+    { field: 'type', label: 'Tip', width: '15%' },
+    { field: 'city', label: 'Şehir', width: '15%' },
+    { field: 'country', label: 'Ülke', width: '15%' }
   ],
 
   getDisplayName: (item) => item.name
@@ -276,19 +277,21 @@ export const FACILITY_CONFIG = {
 
 export const ZONE_CONFIG = {
   icon: '🗺️',
-  labelSingle: 'Bölge',
-  labelPlural: 'Bölgeler',
+  labelSingle: 'Tesis Bölgesi',
+  labelPlural: 'Tesis Bölgeleri',
   description: 'Tesis bölgelerini yönetin',
-  searchFields: ['name', 'zonePurposeCode'],
+  searchFields: ['name', 'facilityName'],
   formLayout: 'grid',
   
   fields: [
     {
       name: 'facilityId',
-      label: 'Tesis ID',
-      type: 'number',
-      required: true,
-      placeholder: 'Tesis ID giriniz'
+      label: 'Tesis',
+      type: 'select',
+      entityEndpoint: 'facilities',
+      entityValueField: 'id',
+      entityLabelField: 'name',
+      required: true
     },
     {
       name: 'name',
@@ -298,34 +301,23 @@ export const ZONE_CONFIG = {
       placeholder: 'Örn: A Blok Kafesler'
     },
     {
-      name: 'zonePurposeCode',
+      name: 'purpose',
       label: 'Bölge Amacı',
       type: 'select',
       dictionary: 'zone-purpose',
-      required: true
-    },
-    {
-      name: 'capacity',
-      label: 'Kapasite',
-      type: 'number',
-      required: false,
-      placeholder: '0'
-    },
-    {
-      name: 'description',
-      label: 'Açıklama',
-      type: 'textarea',
-      required: false,
-      fullWidth: true,
-      rows: 3
+      required: false
     }
   ],
 
   tableColumns: [
     { field: 'name', label: 'Bölge Adı', width: '30%' },
-    { field: 'facilityId', label: 'Tesis ID', width: '15%' },
-    { field: 'zonePurposeCode', label: 'Amaç', width: '25%' },
-    { field: 'capacity', label: 'Kapasite', width: '15%' }
+    { 
+      field: 'facilityName', 
+      label: 'Tesis', 
+      width: '30%',
+      render: (item) => item.facilityName || '-'
+    },
+    { field: 'purpose', label: 'Amaç', width: '25%' }
   ],
 
   getDisplayName: (item) => item.name
@@ -336,10 +328,26 @@ export const ASSET_CONFIG = {
   labelSingle: 'Varlık',
   labelPlural: 'Varlıklar',
   description: 'Varlık kayıtlarını yönetin',
-  searchFields: ['name', 'assetTypeCode', 'assetStatusCode'],
+  searchFields: ['name', 'code', 'facilityName'],
   formLayout: 'grid',
   
   fields: [
+    {
+      name: 'code',
+      label: 'Kod',
+      type: 'text',
+      required: true,
+      placeholder: 'Örn: ASSET001'
+    },
+    {
+      name: 'facilityId',
+      label: 'Tesis',
+      type: 'select',
+      entityEndpoint: 'facilities',
+      entityValueField: 'id',
+      entityLabelField: 'name',
+      required: true
+    },
     {
       name: 'name',
       label: 'Varlık Adı',
@@ -348,21 +356,21 @@ export const ASSET_CONFIG = {
       placeholder: 'Örn: Mama Kabı #12'
     },
     {
-      name: 'assetTypeCode',
+      name: 'type',
       label: 'Varlık Tipi',
       type: 'select',
       dictionary: 'asset-type',
-      required: true
+      required: false
     },
     {
-      name: 'assetStatusCode',
+      name: 'status',
       label: 'Varlık Durumu',
       type: 'select',
       dictionary: 'asset-status',
-      required: true
+      required: false
     },
     {
-      name: 'serialNumber',
+      name: 'serialNo',
       label: 'Seri No',
       type: 'text',
       required: false,
@@ -375,22 +383,90 @@ export const ASSET_CONFIG = {
       required: false
     },
     {
-      name: 'description',
-      label: 'Açıklama',
-      type: 'textarea',
-      required: false,
-      fullWidth: true,
-      rows: 3
+      name: 'warrantyEnd',
+      label: 'Garanti Bitiş',
+      type: 'date',
+      required: false
     }
   ],
 
   tableColumns: [
+    { field: 'code', label: 'Kod', width: '15%' },
     { field: 'name', label: 'Varlık Adı', width: '25%' },
-    { field: 'assetTypeCode', label: 'Tip', width: '20%' },
-    { field: 'assetStatusCode', label: 'Durum', width: '15%' },
-    { field: 'serialNumber', label: 'Seri No', width: '20%' }
+    { 
+      field: 'facilityName', 
+      label: 'Tesis', 
+      width: '20%',
+      render: (item) => item.facilityName || '-'
+    },
+    { field: 'type', label: 'Tip', width: '15%' },
+    { field: 'status', label: 'Durum', width: '15%' }
   ],
 
-  getDisplayName: (item) => item.name
+  getDisplayName: (item) => `${item.code} - ${item.name}`
+};
+
+export const UNIT_CONFIG = {
+  icon: '🚪',
+  labelSingle: 'Birim',
+  labelPlural: 'Birimler',
+  description: 'Tesis birimlerini yönetin',
+  searchFields: ['code', 'facilityName'],
+  formLayout: 'grid',
+  
+  fields: [
+    {
+      name: 'facilityId',
+      label: 'Tesis',
+      type: 'select',
+      entityEndpoint: 'facilities',
+      entityValueField: 'id',
+      entityLabelField: 'name',
+      required: true
+    },
+    {
+      name: 'code',
+      label: 'Birim Kodu',
+      type: 'text',
+      required: true,
+      placeholder: 'Örn: UNIT001'
+    },
+    {
+      name: 'name',
+      label: 'Birim Adı',
+      type: 'text',
+      required: false,
+      placeholder: 'Örn: A Blok Kafes 1'
+    },
+    {
+      name: 'type',
+      label: 'Birim Tipi',
+      type: 'select',
+      dictionary: 'unit-type',
+      required: false
+    },
+    {
+      name: 'capacity',
+      label: 'Kapasite',
+      type: 'number',
+      required: false,
+      placeholder: '0'
+    }
+  ],
+
+  tableColumns: [
+    { field: 'code', label: 'Kod', width: '15%' },
+    { field: 'name', label: 'Birim Adı', width: '25%' },
+    { 
+      field: 'facilityName', 
+      label: 'Tesis', 
+      width: '25%',
+      render: (item) => item.facilityName || '-'
+    },
+    { field: 'type', label: 'Tip', width: '15%' },
+    { field: 'capacity', label: 'Kapasite', width: '10%' }
+  ],
+
+  getDisplayName: (item) => item.code || item.name
 };
 

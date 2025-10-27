@@ -373,7 +373,7 @@ export default function DictionaryManagement({ selectedDictionaryId }) {
                 <small className="form-hint">
                   {editingItem 
                     ? 'Kod değiştirilemez (sadece etiket güncellenebilir)' 
-                    : 'Büyük harfle, alt çizgi ile yazın (örn: FRIENDLY, LAP_LOVER)'}
+                    : 'Büyük harfle, alt çizgi ile yazın'}
                 </small>
               </div>
               <div className="form-group-dict">

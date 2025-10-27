@@ -6,6 +6,7 @@ import {
   BREED_CONFIG, 
   FACILITY_CONFIG,
   ZONE_CONFIG,
+  UNIT_CONFIG,
   ASSET_CONFIG
 } from '../config/entityConfigs.js'
 import { createApiHelpers } from '../api/genericApi.js'
@@ -46,6 +47,7 @@ const ENTITIES = [
   { id: 'breeds', config: BREED_CONFIG, apiEndpoint: 'breeds', icon: '🐕', label: 'Irklar' },
   { id: 'facilities', config: FACILITY_CONFIG, apiEndpoint: 'facilities', icon: '🏢', label: 'Tesisler' },
   { id: 'species', config: SPECIES_CONFIG, apiEndpoint: 'species', icon: '🦁', label: 'Türler' },
+  { id: 'units', config: UNIT_CONFIG, apiEndpoint: 'facility-units', icon: '🚪', label: 'Birimler' },
   { id: 'zones', config: ZONE_CONFIG, apiEndpoint: 'facility-zones', icon: '🗺️', label: 'Bölgeler' }
 ]
 
