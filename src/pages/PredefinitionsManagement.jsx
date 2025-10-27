@@ -48,7 +48,7 @@ const ENTITIES = [
   { id: 'facilities', config: FACILITY_CONFIG, apiEndpoint: 'facilities', icon: '🏢', label: 'Tesisler' },
   { id: 'species', config: SPECIES_CONFIG, apiEndpoint: 'species', icon: '🦁', label: 'Türler' },
   { id: 'units', config: UNIT_CONFIG, apiEndpoint: 'facility-units', icon: '🚪', label: 'Birimler' },
-  { id: 'zones', config: ZONE_CONFIG, apiEndpoint: 'facility-zones', icon: '🗺️', label: 'Bölgeler' }
+  { id: 'zones', config: ZONE_CONFIG, apiEndpoint: 'facility-zones', icon: '🗺️', label: 'Tesis Bölgeleri' }
 ]
 
 export default function PredefinitionsManagement() {
