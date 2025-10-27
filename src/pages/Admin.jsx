@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import DictionaryManagement from './DictionaryManagement.jsx'
 import AnimalManagement from './AnimalManagement.jsx'
 import EntityManagement from './EntityManagement.jsx'
+import PredefinitionsManagement from './PredefinitionsManagement.jsx'
 import { 
   SPECIES_CONFIG, 
   BREED_CONFIG, 
@@ -35,15 +36,10 @@ export default function Admin() {
 
   const menuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-    { id: 'dictionaries', label: 'Sözlük Tabloları', icon: '📚' },
+    { id: 'dictionaries', label: 'Ön Tanımlamalar', icon: '📚' },
     { id: 'pets', label: 'Hayvanlar', icon: '🐾' },
-    { id: 'species', label: 'Türler', icon: '🦁' },
-    { id: 'breeds', label: 'Irklar', icon: '🐕' },
     { id: 'persons', label: 'Kişiler', icon: '👤' },
     { id: 'volunteers', label: 'Gönüllüler', icon: '🙋' },
-    { id: 'facilities', label: 'Tesisler', icon: '🏢' },
-    { id: 'zones', label: 'Bölgeler', icon: '🗺️' },
-    { id: 'assets', label: 'Varlıklar', icon: '📦' },
     { id: 'events', label: 'Etkinlikler', icon: '📅' },
     { id: 'videos', label: 'Videolar', icon: '🎥' },
     { id: 'applications', label: 'Başvurular', icon: '📝' },
@@ -233,28 +229,12 @@ export default function Admin() {
 
           {/* Dictionary Management Section */}
           {activeSection === 'dictionaries' && (
-            <DictionaryManagement />
+            <PredefinitionsManagement />
           )}
 
           {/* Animals Management Section */}
           {activeSection === 'pets' && (
             <AnimalManagement />
-          )}
-
-          {/* Species Management */}
-          {activeSection === 'species' && (
-            <EntityManagement 
-              entityConfig={SPECIES_CONFIG}
-              apiHelpers={createApiHelpers('species')}
-            />
-          )}
-
-          {/* Breeds Management */}
-          {activeSection === 'breeds' && (
-            <EntityManagement 
-              entityConfig={BREED_CONFIG}
-              apiHelpers={createApiHelpers('breeds')}
-            />
           )}
 
           {/* Persons Management */}
@@ -273,41 +253,12 @@ export default function Admin() {
             />
           )}
 
-          {/* Facilities Management */}
-          {activeSection === 'facilities' && (
-            <EntityManagement 
-              entityConfig={FACILITY_CONFIG}
-              apiHelpers={createApiHelpers('facilities')}
-            />
-          )}
-
-          {/* Zones Management */}
-          {activeSection === 'zones' && (
-            <EntityManagement 
-              entityConfig={ZONE_CONFIG}
-              apiHelpers={createApiHelpers('facility-zones')}
-            />
-          )}
-
-          {/* Assets Management */}
-          {activeSection === 'assets' && (
-            <EntityManagement 
-              entityConfig={ASSET_CONFIG}
-              apiHelpers={createApiHelpers('assets')}
-            />
-          )}
-
           {/* Placeholder for other sections */}
           {activeSection !== 'dashboard' 
             && activeSection !== 'dictionaries' 
             && activeSection !== 'pets'
-            && activeSection !== 'species'
-            && activeSection !== 'breeds'
             && activeSection !== 'persons'
-            && activeSection !== 'volunteers'
-            && activeSection !== 'facilities'
-            && activeSection !== 'zones'
-            && activeSection !== 'assets' && (
+            && activeSection !== 'volunteers' && (
             <div className="admin-placeholder">
               <div className="placeholder-icon">
                 {menuItems.find(item => item.id === activeSection)?.icon}

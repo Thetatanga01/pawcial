@@ -144,13 +144,15 @@ export default function EntityManagement({
               console.log(`Loaded ${data.length} items from dictionary ${field.dictionary}`)
             } else if (field.entityEndpoint) {
               // Load from entity API
-              const url = `http://localhost:8000/api/${field.entityEndpoint}`
+              const url = `http://localhost:8000/api/${field.entityEndpoint}?all=true`
               console.log(`Loading entity from: ${url}`)
               const response = await fetch(url)
               console.log(`Entity response status: ${response.status}`)
               
               if (response.ok) {
-                const entities = await response.json()
+                const result = await response.json()
+                // Backend paginated response veya düz array dönebilir
+                const entities = result.content || result
                 console.log(`Loaded ${entities.length} entities from ${field.entityEndpoint}`)
                 
                 // Transform entity data to dictionary format

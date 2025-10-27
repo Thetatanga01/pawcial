@@ -5,6 +5,7 @@ import {
   updateDictionaryItem,
   deleteDictionaryItem 
 } from '../api/dictionary.js'
+import { createApiHelpers } from '../api/genericApi.js'
 
 // Dictionary configurations
 // supportsUpdate: Backend'de PUT endpoint'i var mı? (Swagger'dan kontrol edildi - 2025-10-25)
@@ -38,14 +39,20 @@ const DICTIONARIES = [
   { id: 'zone-purpose', name: 'ZonePurpose', label: 'Bölge Amacı', icon: '🌍', supportsUpdate: true }
 ]
 
-export default function DictionaryManagement() {
-  const [selectedDictionary, setSelectedDictionary] = useState(DICTIONARIES[0])
+export default function DictionaryManagement({ selectedDictionaryId }) {
+  // Eğer prop olarak id verilmişse, o dictionary'yi seç
+  const initialDict = selectedDictionaryId 
+    ? DICTIONARIES.find(d => d.id === selectedDictionaryId) || DICTIONARIES[0]
+    : DICTIONARIES[0]
+  
+  const [selectedDictionary, setSelectedDictionary] = useState(initialDict)
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [editingItem, setEditingItem] = useState(null)
   const [formData, setFormData] = useState({ code: '', label: '' })
   const [searchTerm, setSearchTerm] = useState('')
+  const [sidebarSearchTerm, setSidebarSearchTerm] = useState('') // Sol menü için arama
   const [notification, setNotification] = useState(null)
 
   // Notification gösterme fonksiyonu
@@ -53,6 +60,16 @@ export default function DictionaryManagement() {
     setNotification({ message, type })
     setTimeout(() => setNotification(null), 3000)
   }
+
+  // selectedDictionaryId prop değiştiğinde dictionary'yi güncelle
+  useEffect(() => {
+    if (selectedDictionaryId) {
+      const dict = DICTIONARIES.find(d => d.id === selectedDictionaryId)
+      if (dict) {
+        setSelectedDictionary(dict)
+      }
+    }
+  }, [selectedDictionaryId])
 
   useEffect(() => {
     loadDictionaryItems()
@@ -62,14 +79,18 @@ export default function DictionaryManagement() {
   const loadDictionaryItems = async () => {
     setLoading(true)
     try {
-      // Backend API entegrasyonu
+      // Dictionary için dictionary API kullan
       const data = await getDictionaryItems(selectedDictionary.id)
       console.log('Loaded dictionary items:', data)
-      // Backend'den gelen data'da id yok, code'u id olarak kullanıyoruz
-      const itemsWithId = data.map(item => ({ ...item, id: item.code }))
+      
+      // Backend'den gelen data'da id yok, code'u id olarak kullan
+      const itemsWithId = Array.isArray(data) ? data.map(item => ({ 
+        ...item, 
+        id: item.code 
+      })) : []
       setItems(itemsWithId)
     } catch (error) {
-      console.error('Error loading dictionary items:', error)
+      console.error('Error loading items:', error)
       showNotification('Veri yüklenirken hata oluştu. Backend sunucusunun çalıştığından emin olun.', 'error')
       setItems([])
     } finally {
@@ -79,6 +100,7 @@ export default function DictionaryManagement() {
 
   const handleCreate = () => {
     setEditingItem(null)
+    
     // Organization için ek alanlar
     if (selectedDictionary.id === 'organization') {
       setFormData({ 
@@ -98,6 +120,7 @@ export default function DictionaryManagement() {
 
   const handleEdit = (item) => {
     setEditingItem(item)
+    
     // Organization için ek alanlar
     if (selectedDictionary.id === 'organization') {
       setFormData({ 
@@ -119,10 +142,11 @@ export default function DictionaryManagement() {
     if (!confirm(`"${item.label}" kaydını deaktive etmek istediğinizden emin misiniz? (Tekrar aktif etmek için backend'e erişim gerekir)`)) return
     
     try {
-      // Backend API entegrasyonu - Toggle (soft delete)
+      // Dictionary için dictionary API kullan
       await deleteDictionaryItem(selectedDictionary.id, item.code)
-      setItems(items.filter(i => i.code !== item.code))
       showNotification('Kayıt başarıyla deaktive edildi!', 'success')
+      // Listeyi yeniden yükle
+      await loadDictionaryItems()
     } catch (error) {
       console.error('Error toggling item:', error)
       showNotification('İşlem başarısız: ' + error.message, 'error')
@@ -134,9 +158,8 @@ export default function DictionaryManagement() {
     
     try {
       if (editingItem) {
-        // Backend API entegrasyonu - Update
+        // Update
         if (selectedDictionary.id === 'organization') {
-          // Organization için tüm alanları güncelle
           const updateData = {
             label: formData.label,
             organizationType: formData.organizationType,
@@ -147,12 +170,11 @@ export default function DictionaryManagement() {
           }
           await updateDictionaryItem(selectedDictionary.id, editingItem.code, updateData)
         } else {
-          // Diğer dictionary'ler için sadece label
           await updateDictionaryItem(selectedDictionary.id, editingItem.code, { label: formData.label })
         }
         showNotification('Kayıt başarıyla güncellendi!', 'success')
       } else {
-        // Backend API entegrasyonu - Create
+        // Create
         await createDictionaryItem(selectedDictionary.id, formData)
         showNotification('Kayıt başarıyla eklendi!', 'success')
       }
@@ -169,20 +191,51 @@ export default function DictionaryManagement() {
     }
   }
 
-  const filteredItems = items.filter(item =>
-    item.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.label.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredItems = items.filter(item => {
+    const searchLower = searchTerm.toLowerCase()
+    const code = (item.code || '').toString().toLowerCase()
+    const label = (item.label || '').toString().toLowerCase()
+    return code.includes(searchLower) || label.includes(searchLower)
+  })
+
+  // Sol menüdeki sözlükleri filtrele
+  const filteredDictionaries = DICTIONARIES.filter(dict =>
+    dict.label.toLowerCase().includes(sidebarSearchTerm.toLowerCase()) ||
+    dict.name.toLowerCase().includes(sidebarSearchTerm.toLowerCase())
   )
 
   return (
     <div className="dictionary-management">
+      {/* Sidebar sadece prop verilmediğinde göster */}
+      {!selectedDictionaryId && (
       <div className="dictionary-sidebar">
         <div className="dictionary-sidebar-header">
-          <h3>Sözlük Tabloları</h3>
-          <span className="dictionary-count">{DICTIONARIES.length}</span>
+          <h3>Ön Tanımlamalar</h3>
+          <span className="dictionary-count">{filteredDictionaries.length}</span>
         </div>
+        
+        {/* Sidebar Search Input */}
+        <div className="dictionary-sidebar-search">
+          <input
+            type="text"
+            placeholder="🔍 Tanım ara..."
+            value={sidebarSearchTerm}
+            onChange={(e) => setSidebarSearchTerm(e.target.value)}
+            className="sidebar-search-input"
+          />
+          {sidebarSearchTerm && (
+            <button
+              className="sidebar-search-clear"
+              onClick={() => setSidebarSearchTerm('')}
+              title="Temizle"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+
         <div className="dictionary-list">
-          {DICTIONARIES.map((dict) => (
+          {filteredDictionaries.map((dict) => (
             <button
               key={dict.id}
               className={`dictionary-item ${selectedDictionary.id === dict.id ? 'active' : ''}`}
@@ -190,12 +243,19 @@ export default function DictionaryManagement() {
             >
               <span className="dictionary-icon">{dict.icon}</span>
               <span className="dictionary-label">{dict.label}</span>
+              {dict.isEntity && <span className="entity-badge">Entity</span>}
             </button>
           ))}
+          {filteredDictionaries.length === 0 && (
+            <div className="dictionary-empty-search">
+              <p>Sonuç bulunamadı</p>
+            </div>
+          )}
         </div>
       </div>
+      )}
 
-      <div className="dictionary-content">
+      <div className="dictionary-content" style={selectedDictionaryId ? { gridColumn: '1 / -1' } : {}}>
         <div className="dictionary-header">
           <div className="dictionary-title-section">
             <h2>
@@ -203,7 +263,7 @@ export default function DictionaryManagement() {
               {selectedDictionary.label}
             </h2>
             <p className="dictionary-subtitle">
-              {selectedDictionary.name} tablosunu yönetin
+              {selectedDictionary.name || selectedDictionary.label} tablosunu yönetin
             </p>
           </div>
           <button className="btn btn-primary" onClick={handleCreate}>
@@ -271,9 +331,9 @@ export default function DictionaryManagement() {
                           <button
                             className="action-btn delete"
                             onClick={() => handleToggle(item)}
-                            title="Deaktive Et"
+                            title="Arşivle / Aktif Et"
                           >
-                            🗑️
+                              🔄
                           </button>
                         </div>
                       </td>

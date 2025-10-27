@@ -43,14 +43,31 @@ export function createApiHelpers(endpoint) {
         }
         
         const data = await response.json();
-        console.log(`Fetched ${endpoint} page`, {
-          page: data.page,
-          size: data.size,
-          totalElements: data.totalElements,
-          totalPages: data.totalPages,
-          contentLength: data.content?.length
-        });
-        return data; // { content, page, size, totalElements, totalPages, hasNext, hasPrevious }
+        
+        // Backend'den array mı yoksa paginated response mu geldiğini kontrol et
+        if (Array.isArray(data)) {
+          // Düz array ise, paginated response formatına çevir
+          console.log(`Fetched ${endpoint} as array, length:`, data.length);
+          return {
+            content: data,
+            page: 0,
+            size: data.length,
+            totalElements: data.length,
+            totalPages: 1,
+            hasNext: false,
+            hasPrevious: false
+          };
+        } else {
+          // Zaten paginated response ise olduğu gibi dön
+          console.log(`Fetched ${endpoint} page`, {
+            page: data.page,
+            size: data.size,
+            totalElements: data.totalElements,
+            totalPages: data.totalPages,
+            contentLength: data.content?.length
+          });
+          return data;
+        }
       } catch (error) {
         console.error(`Error fetching ${endpoint}:`, error);
         throw error;
