@@ -470,3 +470,86 @@ export const UNIT_CONFIG = {
   getDisplayName: (item) => item.code || item.name
 };
 
+export const ANIMAL_EVENT_CONFIG = {
+  icon: '📅',
+  labelSingle: 'Hayvan Etkinliği',
+  labelPlural: 'Hayvan Etkinlikleri',
+  description: 'Hayvan etkinliklerini yönetin',
+  searchFields: ['eventType', 'notes'],
+  formLayout: 'grid',
+  
+  fields: [
+    {
+      name: 'animalId',
+      label: 'Hayvan ID',
+      type: 'number',
+      required: true,
+      placeholder: 'Hayvan ID',
+      hint: 'Hayvan yönetim sayfasından seçin'
+    },
+    {
+      name: 'eventType',
+      label: 'Etkinlik Tipi',
+      type: 'select',
+      entityEndpoint: 'event-types',
+      entityValueField: 'code',
+      entityLabelField: 'name',
+      required: true
+    },
+    {
+      name: 'eventAt',
+      label: 'Etkinlik Tarihi',
+      type: 'date',
+      required: true
+    },
+    {
+      name: 'facilityId',
+      label: 'Tesis',
+      type: 'select',
+      entityEndpoint: 'facilities',
+      entityValueField: 'id',
+      entityLabelField: 'name',
+      required: false
+    },
+    {
+      name: 'personId',
+      label: 'İlgili Kişi',
+      type: 'select',
+      entityEndpoint: 'persons',
+      entityValueField: 'id',
+      entityLabelField: 'fullName',
+      required: false,
+      hint: 'Veteriner, bakıcı vb.'
+    },
+    {
+      name: 'notes',
+      label: 'Notlar',
+      type: 'textarea',
+      required: false,
+      fullWidth: true,
+      rows: 4,
+      placeholder: 'Etkinlik detayları, gözlemler vb.'
+    }
+  ],
+
+  tableColumns: [
+    { field: 'eventType', label: 'Etkinlik Tipi', width: '20%' },
+    { field: 'eventAt', label: 'Tarih', width: '15%' },
+    { 
+      field: 'facilityName', 
+      label: 'Tesis', 
+      width: '20%',
+      render: (fieldValue, item) => item.facilityName || '-'
+    },
+    { 
+      field: 'personFullName', 
+      label: 'İlgili Kişi', 
+      width: '20%',
+      render: (fieldValue, item) => item.personFullName || '-'
+    },
+    { field: 'notes', label: 'Notlar', width: '25%' }
+  ],
+
+  getDisplayName: (item) => `${item.eventType} - ${item.eventAt}`
+};
+

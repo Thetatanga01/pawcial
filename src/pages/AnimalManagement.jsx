@@ -1,8 +1,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { getAnimals, createAnimal, updateAnimal, deleteAnimal, searchAnimals } from '../api/animals.js'
 import { getDictionaryItems } from '../api/dictionary.js'
+import { createApiHelpers } from '../api/genericApi.js'
+
+const animalEventApi = createApiHelpers('animal-events')
+const personsApi = createApiHelpers('persons')
 
 export default function AnimalManagement() {
+  // View mode: 'list' or 'events'
+  const [viewMode, setViewMode] = useState('list')
+  const [selectedAnimal, setSelectedAnimal] = useState(null)
+  
   const [animals, setAnimals] = useState([])
   const [loading, setLoading] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -10,6 +18,50 @@ export default function AnimalManagement() {
   const [showAll, setShowAll] = useState(false) // Backend'in 'all' parametresi
   const [notification, setNotification] = useState(null)
   const [confirmModal, setConfirmModal] = useState(null) // { title, message, onConfirm, confirmText, type, isActive }
+  
+  // Animal Events states
+  const [events, setEvents] = useState([])
+  const [eventsLoading, setEventsLoading] = useState(false)
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false)
+  const [editingEvent, setEditingEvent] = useState(null)
+  const [showAllEvents, setShowAllEvents] = useState(false)
+  const [eventDictionaries, setEventDictionaries] = useState({})
+  // Person search state
+  const [personSearchTerm, setPersonSearchTerm] = useState('')
+  const [personSearchResults, setPersonSearchResults] = useState([])
+  const [personSearchLoading, setPersonSearchLoading] = useState(false)
+  const personSearchDebounceRef = useRef(null)
+  const [eventFormData, setEventFormData] = useState({
+    animalId: '',
+    eventType: '',
+    eventAt: '',
+    facilityId: '',
+    unitId: '',
+    fromFacilityId: '',
+    toFacilityId: '',
+    fromUnitId: '',
+    toUnitId: '',
+    outcomeType: '',
+    sourceType: '',
+    holdType: '',
+    personId: '',
+    volunteerId: '',
+    medEventType: '',
+    vaccineCode: '',
+    medicationName: '',
+    doseText: '',
+    route: '',
+    labTestName: '',
+    details: ''
+  })
+  
+  // Events pagination
+  const [eventsPage, setEventsPage] = useState(0)
+  const [eventsPageSize, setEventsPageSize] = useState(20)
+  const [eventsTotalElements, setEventsTotalElements] = useState(0)
+  const [eventsTotalPages, setEventsTotalPages] = useState(0)
+  const [eventsHasNext, setEventsHasNext] = useState(false)
+  const [eventsHasPrevious, setEventsHasPrevious] = useState(false)
   
   // Search filters
   const [searchName, setSearchName] = useState('')
@@ -329,8 +381,1116 @@ export default function AnimalManagement() {
     }
   }
 
+  // Handle animal row click
+  const handleAnimalClick = (animal) => {
+    setSelectedAnimal(animal)
+    setViewMode('events')
+    loadAnimalEvents(animal.id)
+    loadEventDictionaries()
+  }
+
+  // Load animal events
+  const loadAnimalEvents = async (animalId) => {
+    setEventsLoading(true)
+    try {
+      const response = await fetch(
+        `http://localhost:8000/api/animal-events/animal/${animalId}?page=${eventsPage}&size=${eventsPageSize}&all=${showAllEvents}`
+      )
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (data.content) {
+          setEvents(data.content || [])
+          setEventsTotalElements(data.totalElements || 0)
+          setEventsTotalPages(data.totalPages || 0)
+          setEventsHasNext(data.hasNext || false)
+          setEventsHasPrevious(data.hasPrevious || false)
+        } else {
+          setEvents(Array.isArray(data) ? data : [])
+          setEventsTotalElements(Array.isArray(data) ? data.length : 0)
+          setEventsTotalPages(1)
+        }
+      }
+    } catch (error) {
+      console.error('Error loading events:', error)
+      showNotification('Etkinlikler yüklenirken hata oluştu', 'error')
+      setEvents([])
+    } finally {
+      setEventsLoading(false)
+    }
+  }
+
+  const loadEventDictionaries = async () => {
+    try {
+      const [
+        eventTypesRaw, 
+        facilitiesRaw, 
+        unitsRaw,
+        sourceTypesRaw,
+        outcomeTypesRaw,
+        holdTypesRaw,
+        medEventTypesRaw,
+        vaccinesRaw,
+        doseRoutesRaw,
+        volunteersRaw
+      ] = await Promise.all([
+        // EventType entity'den çek (dictionary değil!)
+        fetch('http://localhost:8000/api/event-types')
+          .then(res => res.json())
+          .then(data => (data.content || data))
+          .catch(() => []),
+        fetch('http://localhost:8000/api/facilities')
+          .then(res => res.json())
+          .then(data => (data.content || data))
+          .catch(() => []),
+        fetch('http://localhost:8000/api/facility-units')
+          .then(res => res.json())
+          .then(data => (data.content || data))
+          .catch(() => []),
+        getDictionaryItems('source-type').catch(() => []),
+        getDictionaryItems('outcome-type').catch(() => []),
+        getDictionaryItems('hold-type').catch(() => []),
+        getDictionaryItems('med-event-type').catch(() => []),
+        getDictionaryItems('vaccine').catch(() => []),
+        getDictionaryItems('dose-route').catch(() => []),
+        fetch('http://localhost:8000/api/volunteers')
+          .then(res => res.json())
+          .then(data => (data.content || data))
+          .catch(() => [])
+      ])
+
+      // EventType: sadece aktif olanları al
+      const eventTypes = (eventTypesRaw || [])
+        .filter(et => et.isActive !== false)
+        .map(et => ({ code: et.code || et.id, label: et.name || et.label }))
+      
+      const facilities = (facilitiesRaw || [])
+        .filter(f => f.isActive !== false)
+        .map(f => ({ code: f.id, label: f.name }))
+
+      const units = (unitsRaw || [])
+        .filter(u => u.isActive !== false)
+        .map(u => ({ code: u.id, label: u.code || u.name }))
+
+      const sourceTypes = (sourceTypesRaw || []).filter(st => st.isActive !== false)
+      const outcomeTypes = (outcomeTypesRaw || []).filter(ot => ot.isActive !== false)
+      const holdTypes = (holdTypesRaw || []).filter(ht => ht.isActive !== false)
+      const medEventTypes = (medEventTypesRaw || []).filter(mt => mt.isActive !== false)
+      const vaccines = (vaccinesRaw || []).filter(v => v.isActive !== false)
+      const doseRoutes = (doseRoutesRaw || []).filter(dr => dr.isActive !== false)
+      
+      const volunteers = (volunteersRaw || [])
+        .filter(v => v.isActive !== false)
+        .map(v => ({ code: v.id, label: v.personFullName || `Volunteer ${v.id}` }))
+
+      setEventDictionaries({
+        eventType: eventTypes,
+        facilityId: facilities,
+        unitId: units,
+        sourceType: sourceTypes,
+        outcomeType: outcomeTypes,
+        holdType: holdTypes,
+        medEventType: medEventTypes,
+        vaccineCode: vaccines,
+        route: doseRoutes,
+        volunteerId: volunteers
+      })
+    } catch (error) {
+      console.error('Error loading event dictionaries:', error)
+    }
+  }
+
+  // Person search (active only)
+  const searchPersons = async (term) => {
+    if (!term || term.trim().length < 2) {
+      setPersonSearchResults([])
+      return
+    }
+    setPersonSearchLoading(true)
+    try {
+      const data = await personsApi.search({ page: 0, size: 10 }, { fullName: term })
+      const items = (data.content || data || [])
+        .filter(p => p.isActive !== false)
+        .map(p => ({ id: p.id, label: p.fullName }))
+      setPersonSearchResults(items)
+    } catch (err) {
+      console.error('Error searching persons:', err)
+      setPersonSearchResults([])
+    } finally {
+      setPersonSearchLoading(false)
+    }
+  }
+
+  // Debounce person search
+  useEffect(() => {
+    if (personSearchDebounceRef.current) clearTimeout(personSearchDebounceRef.current)
+    
+    // Only search if personId is not already selected
+    if (eventFormData.personId && personSearchTerm) {
+      // User has already selected someone, don't search again
+      return
+    }
+    
+    personSearchDebounceRef.current = setTimeout(() => {
+      searchPersons(personSearchTerm)
+    }, 400)
+    return () => {
+      if (personSearchDebounceRef.current) clearTimeout(personSearchDebounceRef.current)
+    }
+  }, [personSearchTerm, eventFormData.personId])
+
+  const handleCreateEvent = () => {
+    setEditingEvent(null)
+    // today yyyy-mm-ddTHH:MM (datetime-local format)
+    const today = new Date()
+    const yyyy = today.getFullYear()
+    const mm = String(today.getMonth() + 1).padStart(2, '0')
+    const dd = String(today.getDate()).padStart(2, '0')
+    const hh = String(today.getHours()).padStart(2, '0')
+    const min = String(today.getMinutes()).padStart(2, '0')
+    const todayStr = `${yyyy}-${mm}-${dd}T${hh}:${min}`
+
+    // default event type = first active option if available
+    // Wait a bit for dictionaries to load if they haven't yet
+    setTimeout(() => {
+      const defaultEventType = (eventDictionaries.eventType && eventDictionaries.eventType.length > 0 && eventDictionaries.eventType[0]?.code) || ''
+      setEventFormData(prev => ({
+        ...prev,
+        eventType: defaultEventType || prev.eventType
+      }))
+    }, 100)
+
+    setEventFormData({
+      animalId: selectedAnimal.id,
+      eventType: (eventDictionaries.eventType && eventDictionaries.eventType.length > 0 && eventDictionaries.eventType[0]?.code) || '',
+      eventAt: todayStr,
+      facilityId: '',
+      unitId: '',
+      fromFacilityId: '',
+      toFacilityId: '',
+      fromUnitId: '',
+      toUnitId: '',
+      outcomeType: '',
+      sourceType: '',
+      holdType: '',
+      personId: '',
+      volunteerId: '',
+      medEventType: '',
+      vaccineCode: '',
+      medicationName: '',
+      doseText: '',
+      route: '',
+      labTestName: '',
+      details: ''
+    })
+    setPersonSearchTerm('')
+    setPersonSearchResults([])
+    setIsEventModalOpen(true)
+  }
+
+  const handleEditEvent = (event) => {
+    setEditingEvent(event)
+    
+    // Backend'den gelen eventAt formatını datetime-local input için düzenle
+    let eventAtValue = event.eventAt || ''
+    if (eventAtValue) {
+      // Backend format: "2025-10-31T14:30:00" veya "2025-10-31T14:30:00.000"
+      // datetime-local format: "2025-10-31T14:30"
+      eventAtValue = eventAtValue.substring(0, 16) // İlk 16 karakter: yyyy-MM-ddTHH:mm
+    }
+    
+    setEventFormData({
+      animalId: event.animalId || selectedAnimal.id,
+      eventType: event.eventType || '',
+      eventAt: eventAtValue,
+      facilityId: event.facilityId || '',
+      unitId: event.unitId || '',
+      fromFacilityId: event.fromFacilityId || '',
+      toFacilityId: event.toFacilityId || '',
+      fromUnitId: event.fromUnitId || '',
+      toUnitId: event.toUnitId || '',
+      outcomeType: event.outcomeType || '',
+      sourceType: event.sourceType || '',
+      holdType: event.holdType || '',
+      personId: event.personId || '',
+      volunteerId: event.volunteerId || '',
+      medEventType: event.medEventType || '',
+      vaccineCode: event.vaccineCode || '',
+      medicationName: event.medicationName || '',
+      doseText: event.doseText || '',
+      route: event.route || '',
+      labTestName: event.labTestName || '',
+      details: event.details || ''
+    })
+    // If editing and person is selected, show person name in search field
+    setPersonSearchTerm(event.personName || '')
+    setPersonSearchResults([])
+    setIsEventModalOpen(true)
+  }
+
+  const handleToggleEventActive = (event) => {
+    const isCurrentlyActive = event.isActive
+    const action = isCurrentlyActive ? 'arşivlemek' : 'tekrar aktif etmek'
+    const actionPast = isCurrentlyActive ? 'arşivlendi' : 'aktif edildi'
+    const icon = isCurrentlyActive ? '📦' : '✅'
+    const modalType = isCurrentlyActive ? 'warning' : 'success'
+    
+    setConfirmModal({
+      title: isCurrentlyActive ? 'Etkinliği Arşivle' : 'Etkinliği Aktif Et',
+      message: `Bu etkinliği ${action} istediğinizden emin misiniz?`,
+      icon: icon,
+      type: modalType,
+      confirmText: isCurrentlyActive ? 'Arşivle' : 'Aktif Et',
+      onConfirm: async () => {
+        try {
+          await animalEventApi.delete(event.id)
+          showNotification(`Etkinlik başarıyla ${actionPast}!`, 'success')
+          loadAnimalEvents(selectedAnimal.id)
+        } catch (error) {
+          console.error('Error toggling event:', error)
+          showNotification('İşlem başarısız: ' + error.message, 'error')
+        }
+      }
+    })
+  }
+
+  const handleEventSubmit = async (e) => {
+    e.preventDefault()
+
+    try {
+      const eventType = eventFormData.eventType
+      
+      // Event type'a göre sadece gerekli alanları gönder
+      const cleanedData = Object.entries(eventFormData).reduce((acc, [key, value]) => {
+        // eventAt için timezone ekle
+        if (key === 'eventAt' && value) {
+          const date = new Date(value)
+          const tzOffset = -date.getTimezoneOffset()
+          const tzHours = String(Math.floor(Math.abs(tzOffset) / 60)).padStart(2, '0')
+          const tzMins = String(Math.abs(tzOffset) % 60).padStart(2, '0')
+          const tzSign = tzOffset >= 0 ? '+' : '-'
+          acc[key] = `${value}:00${tzSign}${tzHours}:${tzMins}`
+          return acc
+        }
+
+        // Boş değerleri null yap
+        if (value === '') {
+          acc[key] = null
+          return acc
+        }
+
+        // Event type'a göre filtrele
+        // INTAKE için sadece sourceType, facilityId
+        if (eventType === 'INTAKE' && ['outcomeType', 'holdType', 'unitId', 'fromFacilityId', 'toFacilityId', 'fromUnitId', 'toUnitId', 'medEventType', 'vaccineCode', 'medicationName', 'doseText', 'route', 'labTestName'].includes(key)) {
+          return acc // Bu alanları gönderme
+        }
+        
+        // TRANSFER için sadece from/to facilities ve units
+        if (eventType === 'TRANSFER' && ['sourceType', 'outcomeType', 'holdType', 'facilityId', 'unitId', 'medEventType', 'vaccineCode', 'medicationName', 'doseText', 'route', 'labTestName'].includes(key)) {
+          return acc
+        }
+        
+        // OUTCOME için sadece outcomeType, facilityId
+        if (eventType === 'OUTCOME' && ['sourceType', 'holdType', 'unitId', 'fromFacilityId', 'toFacilityId', 'fromUnitId', 'toUnitId', 'medEventType', 'vaccineCode', 'medicationName', 'doseText', 'route', 'labTestName'].includes(key)) {
+          return acc
+        }
+        
+        // HOLD_START/HOLD_END için sadece holdType, facilityId, unitId
+        if ((eventType === 'HOLD_START' || eventType === 'HOLD_END') && ['sourceType', 'outcomeType', 'fromFacilityId', 'toFacilityId', 'fromUnitId', 'toUnitId', 'medEventType', 'vaccineCode', 'medicationName', 'doseText', 'route', 'labTestName'].includes(key)) {
+          return acc
+        }
+        
+        // MEDICAL için sadece medical alanları
+        if (eventType === 'MEDICAL' && ['sourceType', 'outcomeType', 'holdType', 'fromFacilityId', 'toFacilityId', 'fromUnitId', 'toUnitId', 'unitId'].includes(key)) {
+          return acc
+        }
+
+        acc[key] = value
+        return acc
+      }, {})
+
+      console.log('Sending to backend:', cleanedData)
+
+      if (editingEvent) {
+        await animalEventApi.update(editingEvent.id, cleanedData)
+        showNotification('Etkinlik başarıyla güncellendi!', 'success')
+      } else {
+        await animalEventApi.create(cleanedData)
+        showNotification('Etkinlik başarıyla eklendi!', 'success')
+      }
+
+      setIsEventModalOpen(false)
+      setEditingEvent(null)
+      loadAnimalEvents(selectedAnimal.id)
+    } catch (error) {
+      console.error('Error saving event:', error)
+      showNotification('Kayıt işlemi başarısız: ' + error.message, 'error')
+    }
+  }
+
+  const handleBackToList = () => {
+    setViewMode('list')
+    setSelectedAnimal(null)
+    setEvents([])
+    setEventsPage(0)
+  }
+
+  // Reload events when pagination changes
+  useEffect(() => {
+    if (viewMode === 'events' && selectedAnimal) {
+      loadAnimalEvents(selectedAnimal.id)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventsPage, eventsPageSize, showAllEvents, viewMode, selectedAnimal])
+
   // Artık filtering backend'de yapılıyor - animals direkt kullanılıyor // No client-side filtering if no search term (backend will handle it)
 
+  // Render events view
+  if (viewMode === 'events' && selectedAnimal) {
+    return (
+      <div className="dictionary-management">
+        <div className="dictionary-content" style={{ gridColumn: '1 / -1' }}>
+          <div className="dictionary-header">
+            <div className="dictionary-title-section">
+              <button 
+                className="btn btn-secondary" 
+                onClick={handleBackToList}
+                style={{ marginBottom: '10px' }}
+              >
+                ← Hayvanlar Listesine Dön
+              </button>
+              <h2>
+                <span className="dictionary-icon-large">📅</span>
+                {selectedAnimal.name} - Etkinlikler
+              </h2>
+              <p className="dictionary-subtitle">
+                {selectedAnimal.speciesName} • {selectedAnimal.breedName || 'Bilinmeyen Irk'} • 
+                {selectedAnimal.sex && ` ${selectedAnimal.sex}`}
+              </p>
+            </div>
+            <button className="btn btn-primary" onClick={handleCreateEvent}>
+              + Yeni Etkinlik Ekle
+            </button>
+          </div>
+
+          <div className="dictionary-toolbar">
+            <div className="toolbar-filters">
+              <label className="filter-checkbox-label">
+                <input
+                  type="checkbox"
+                  checked={showAllEvents}
+                  onChange={(e) => setShowAllEvents(e.target.checked)}
+                  className="filter-checkbox"
+                />
+                <span className="filter-checkbox-text">
+                  📦 Arşivlenmişleri de göster
+                </span>
+              </label>
+            </div>
+            <div className="toolbar-info">
+              <span className="item-count">
+                Toplam {eventsTotalElements} etkinlik
+                {eventsTotalElements > 0 && ` (Sayfa ${eventsPage + 1} / ${eventsTotalPages})`}
+                {showAllEvents && <span className="inactive-badge"> arşiv dahil</span>}
+              </span>
+            </div>
+          </div>
+
+          {eventsLoading ? (
+            <div className="loading-state">
+              <div className="spinner"></div>
+              <p>Yükleniyor...</p>
+            </div>
+          ) : (
+            <div className="dictionary-table-container">
+              <table className="dictionary-table">
+                <thead>
+                  <tr>
+                    <th style={{ width: '50px' }}>#</th>
+                    <th style={{ width: '18%' }}>Etkinlik Tipi</th>
+                    <th style={{ width: '13%' }}>Tarih</th>
+                    <th style={{ width: '13%' }}>Oluşturulma</th>
+                    <th style={{ width: '18%' }}>Tesis</th>
+                    <th style={{ width: '15%' }}>İlgili Kişi</th>
+                    <th style={{ width: '23%' }}>Notlar</th>
+                    <th style={{ width: '120px' }}>İşlemler</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {events.length === 0 ? (
+                    <tr>
+                      <td colSpan="8" className="empty-state">
+                        Henüz etkinlik eklenmemiş
+                      </td>
+                    </tr>
+                  ) : (
+                    events.map((event, index) => {
+                      const isActive = event.isActive
+                      return (
+                        <tr key={event.id} className={!isActive ? 'row-inactive' : ''}>
+                          <td>{index + 1}</td>
+                          <td>
+                            {event.eventTypeLabel ? `${event.eventTypeLabel} (${event.eventType})` : (event.eventType || '-')}
+                            {!isActive && <span className="badge-archived">Arşiv</span>}
+                          </td>
+                          <td>
+                            {event.eventAt ? new Date(event.eventAt).toLocaleString('tr-TR', {
+                              year: 'numeric',
+                              month: '2-digit',
+                              day: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            }) : '-'}
+                          </td>
+                          <td>
+                            {event.createdAt ? new Date(event.createdAt).toLocaleString('tr-TR', {
+                              year: 'numeric',
+                              month: '2-digit',
+                              day: '2-digit',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            }) : '-'}
+                          </td>
+                          <td>{event.facilityName || '-'}</td>
+                          <td>{event.personName || '-'}</td>
+                          <td>{event.details || '-'}</td>
+                          <td>
+                            <div className="action-buttons">
+                              {event.isReadOnly ? (
+                                <button
+                                  className="action-btn view"
+                                  onClick={() => handleEditEvent(event)}
+                                  title="Görüntüle"
+                                >
+                                  👁️
+                                </button>
+                              ) : (
+                                <>
+                                  <button
+                                    className="action-btn edit"
+                                    onClick={() => handleEditEvent(event)}
+                                    title="Düzenle"
+                                  >
+                                    ✏️
+                                  </button>
+                                  <button
+                                    className="action-btn delete"
+                                    onClick={() => handleToggleEventActive(event)}
+                                    title="Arşivle / Aktif Et"
+                                  >
+                                    🔄
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Events Pagination */}
+          {!eventsLoading && eventsTotalElements > 0 && (
+            <div className="pagination-container">
+              <div className="pagination-info">
+                Gösterilen: {events.length === 0 ? 0 : (eventsPage * eventsPageSize) + 1}-{Math.min((eventsPage + 1) * eventsPageSize, eventsTotalElements)} / {eventsTotalElements}
+              </div>
+              
+              <div className="pagination-controls">
+                <button
+                  className="pagination-btn"
+                  onClick={() => setEventsPage(0)}
+                  disabled={!eventsHasPrevious}
+                  title="İlk sayfa"
+                >
+                  ⏮
+                </button>
+                <button
+                  className="pagination-btn"
+                  onClick={() => setEventsPage(eventsPage - 1)}
+                  disabled={!eventsHasPrevious}
+                  title="Önceki sayfa"
+                >
+                  ◀
+                </button>
+                
+                <div className="pagination-pages">
+                  {Array.from({ length: eventsTotalPages }, (_, i) => {
+                    const showPage = (
+                      i === 0 ||
+                      i === eventsTotalPages - 1 ||
+                      (i >= eventsPage - 1 && i <= eventsPage + 1)
+                    )
+                    if (!showPage) {
+                      if (i === eventsPage - 2 || i === eventsPage + 2) {
+                        return <span key={i} className="pagination-ellipsis">...</span>
+                      }
+                      return null
+                    }
+                    return (
+                      <button
+                        key={i}
+                        className={`pagination-page ${i === eventsPage ? 'active' : ''}`}
+                        onClick={() => setEventsPage(i)}
+                      >
+                        {i + 1}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <button
+                  className="pagination-btn"
+                  onClick={() => setEventsPage(eventsPage + 1)}
+                  disabled={!eventsHasNext}
+                  title="Sonraki sayfa"
+                >
+                  ▶
+                </button>
+                <button
+                  className="pagination-btn"
+                  onClick={() => setEventsPage(eventsTotalPages - 1)}
+                  disabled={!eventsHasNext}
+                  title="Son sayfa"
+                >
+                  ⏭
+                </button>
+              </div>
+
+              <div className="pagination-size-selector">
+                <label htmlFor="eventsPageSize">Sayfa başına:</label>
+                <select
+                  id="eventsPageSize"
+                  value={eventsPageSize}
+                  onChange={(e) => {
+                    setEventsPageSize(Number(e.target.value))
+                    setEventsPage(0)
+                  }}
+                  className="page-size-select"
+                >
+                  <option value="10">10</option>
+                  <option value="20">20</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+              </div>
+            </div>
+          )}
+
+          {/* Event Modal */}
+          {isEventModalOpen && (
+            <div className="modal-overlay-dict">
+              <div className="modal-dict modal-dict-large">
+                <div className="modal-dict-header">
+                  <h3>
+                    {editingEvent?.isReadOnly ? '👁️ Etkinlik Detayları' : (editingEvent ? '📅 Etkinliği Düzenle' : '📅 Yeni Etkinlik Ekle')}
+                    {' - '}
+                    <span style={{ fontWeight: 'normal', color: '#666' }}>{selectedAnimal.name}</span>
+                  </h3>
+                  <button className="modal-close-btn" onClick={() => setIsEventModalOpen(false)}>
+                    ✕
+                  </button>
+                </div>
+                <form onSubmit={handleEventSubmit} className="modal-dict-body">
+                  <fieldset disabled={editingEvent?.isReadOnly} style={{ border: 'none', padding: 0, margin: 0 }}>
+                  <div className="form-grid-2">
+
+                    {/* Event Type */}
+                    <div className="form-group-dict">
+                      <label htmlFor="eventType">Etkinlik Tipi *</label>
+                      <select
+                        id="eventType"
+                        value={eventFormData.eventType}
+                        onChange={(e) => {
+                          const newType = e.target.value
+                          // Event type değiştiğinde diğer type'lara ait alanları temizle
+                          setEventFormData({
+                            ...eventFormData,
+                            eventType: newType,
+                            // Tüm özel alanları temizle
+                            sourceType: '',
+                            outcomeType: '',
+                            holdType: '',
+                            facilityId: '',
+                            unitId: '',
+                            fromFacilityId: '',
+                            toFacilityId: '',
+                            fromUnitId: '',
+                            toUnitId: '',
+                            medEventType: '',
+                            vaccineCode: '',
+                            medicationName: '',
+                            doseText: '',
+                            route: '',
+                            labTestName: ''
+                          })
+                        }}
+                        required
+                        disabled={editingEvent?.isReadOnly}
+                        className="form-input-dict"
+                      >
+                        <option value="">Seçiniz</option>
+                        {(eventDictionaries.eventType || []).map((opt) => (
+                          <option key={opt.code} value={opt.code}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Event Date */}
+                    <div className="form-group-dict">
+                      <label htmlFor="eventAt">Etkinlik Tarihi ve Saati *</label>
+                      <input
+                        type="datetime-local"
+                        id="eventAt"
+                        value={eventFormData.eventAt}
+                        onChange={(e) => setEventFormData({ ...eventFormData, eventAt: e.target.value })}
+                        required
+                        disabled={editingEvent?.isReadOnly}
+                        className="form-input-dict"
+                      />
+                      <small className="form-hint">Tarih ve saat seçiniz</small>
+                    </div>
+
+                    {/* INTAKE: Source Type */}
+                    {eventFormData.eventType === 'INTAKE' && (
+                      <div className="form-group-dict">
+                        <label htmlFor="sourceType">Kaynak Tipi *</label>
+                        <select
+                          id="sourceType"
+                          value={eventFormData.sourceType}
+                          onChange={(e) => setEventFormData({ ...eventFormData, sourceType: e.target.value })}
+                          required
+                          className="form-input-dict"
+                        >
+                          <option value="">Seçiniz</option>
+                          {(eventDictionaries.sourceType || []).map((opt) => (
+                            <option key={opt.code} value={opt.code}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* TRANSFER: From/To Facilities and Units */}
+                    {eventFormData.eventType === 'TRANSFER' && (
+                      <>
+                        <div className="form-group-dict">
+                          <label htmlFor="fromFacilityId">Kaynak Tesis *</label>
+                          <select
+                            id="fromFacilityId"
+                            value={eventFormData.fromFacilityId}
+                            onChange={(e) => setEventFormData({ ...eventFormData, fromFacilityId: e.target.value })}
+                            required
+                            className="form-input-dict"
+                          >
+                            <option value="">Seçiniz</option>
+                            {(eventDictionaries.facilityId || []).map((opt) => (
+                              <option key={opt.code} value={opt.code}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="form-group-dict">
+                          <label htmlFor="fromUnitId">Kaynak Birim *</label>
+                          <select
+                            id="fromUnitId"
+                            value={eventFormData.fromUnitId}
+                            onChange={(e) => setEventFormData({ ...eventFormData, fromUnitId: e.target.value })}
+                            required
+                            className="form-input-dict"
+                          >
+                            <option value="">Seçiniz</option>
+                            {(eventDictionaries.unitId || []).map((opt) => (
+                              <option key={opt.code} value={opt.code}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="form-group-dict">
+                          <label htmlFor="toFacilityId">Hedef Tesis *</label>
+                          <select
+                            id="toFacilityId"
+                            value={eventFormData.toFacilityId}
+                            onChange={(e) => setEventFormData({ ...eventFormData, toFacilityId: e.target.value })}
+                            required
+                            className="form-input-dict"
+                          >
+                            <option value="">Seçiniz</option>
+                            {(eventDictionaries.facilityId || []).map((opt) => (
+                              <option key={opt.code} value={opt.code}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="form-group-dict">
+                          <label htmlFor="toUnitId">Hedef Birim *</label>
+                          <select
+                            id="toUnitId"
+                            value={eventFormData.toUnitId}
+                            onChange={(e) => setEventFormData({ ...eventFormData, toUnitId: e.target.value })}
+                            required
+                            className="form-input-dict"
+                          >
+                            <option value="">Seçiniz</option>
+                            {(eventDictionaries.unitId || []).map((opt) => (
+                              <option key={opt.code} value={opt.code}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </>
+                    )}
+
+                    {/* OUTCOME: Outcome Type */}
+                    {eventFormData.eventType === 'OUTCOME' && (
+                      <div className="form-group-dict">
+                        <label htmlFor="outcomeType">Sonuç Tipi *</label>
+                        <select
+                          id="outcomeType"
+                          value={eventFormData.outcomeType}
+                          onChange={(e) => setEventFormData({ ...eventFormData, outcomeType: e.target.value })}
+                          required
+                          className="form-input-dict"
+                        >
+                          <option value="">Seçiniz</option>
+                          {(eventDictionaries.outcomeType || []).map((opt) => (
+                            <option key={opt.code} value={opt.code}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* HOLD_START/HOLD_END: Hold Type and Unit */}
+                    {(eventFormData.eventType === 'HOLD_START' || eventFormData.eventType === 'HOLD_END') && (
+                      <>
+                        <div className="form-group-dict">
+                          <label htmlFor="holdType">Bekleme Tipi *</label>
+                          <select
+                            id="holdType"
+                            value={eventFormData.holdType}
+                            onChange={(e) => setEventFormData({ ...eventFormData, holdType: e.target.value })}
+                            required
+                            className="form-input-dict"
+                          >
+                            <option value="">Seçiniz</option>
+                            {(eventDictionaries.holdType || []).map((opt) => (
+                              <option key={opt.code} value={opt.code}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="form-group-dict">
+                          <label htmlFor="unitId">Birim *</label>
+                          <select
+                            id="unitId"
+                            value={eventFormData.unitId}
+                            onChange={(e) => setEventFormData({ ...eventFormData, unitId: e.target.value })}
+                            required
+                            className="form-input-dict"
+                          >
+                            <option value="">Seçiniz</option>
+                            {(eventDictionaries.unitId || []).map((opt) => (
+                              <option key={opt.code} value={opt.code}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      </>
+                    )}
+
+                    {/* MEDICAL: Medical Event Type */}
+                    {eventFormData.eventType === 'MEDICAL' && (
+                      <>
+                        <div className="form-group-dict">
+                          <label htmlFor="medEventType">Tıbbi Olay Tipi *</label>
+                          <select
+                            id="medEventType"
+                            value={eventFormData.medEventType}
+                            onChange={(e) => setEventFormData({ ...eventFormData, medEventType: e.target.value })}
+                            required
+                            className="form-input-dict"
+                          >
+                            <option value="">Seçiniz</option>
+                            {(eventDictionaries.medEventType || []).map((opt) => (
+                              <option key={opt.code} value={opt.code}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="form-group-dict">
+                          <label htmlFor="vaccineCode">Aşı</label>
+                          <select
+                            id="vaccineCode"
+                            value={eventFormData.vaccineCode}
+                            onChange={(e) => setEventFormData({ ...eventFormData, vaccineCode: e.target.value })}
+                            className="form-input-dict"
+                          >
+                            <option value="">Seçiniz</option>
+                            {(eventDictionaries.vaccineCode || []).map((opt) => (
+                              <option key={opt.code} value={opt.code}>
+                                {opt.label}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="form-group-dict">
+                          <label htmlFor="medicationName">İlaç Adı</label>
+                          <input
+                            type="text"
+                            id="medicationName"
+                            value={eventFormData.medicationName}
+                            onChange={(e) => setEventFormData({ ...eventFormData, medicationName: e.target.value })}
+                            className="form-input-dict"
+                            placeholder="İlaç adı"
+                          />
+                        </div>
+                        <div className="form-group-dict">
+                          <label htmlFor="doseText">Doz</label>
+                          <input
+                            type="text"
+                            id="doseText"
+                            value={eventFormData.doseText}
+                            onChange={(e) => setEventFormData({ ...eventFormData, doseText: e.target.value })}
+                            className="form-input-dict"
+                            placeholder="Örn: 10mg"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {/* Facility - sadece TRANSFER olmayan event type'lar için */}
+                    {eventFormData.eventType !== 'TRANSFER' && (
+                      <div className="form-group-dict">
+                        <label htmlFor="facilityId">Tesis</label>
+                        <select
+                          id="facilityId"
+                          value={eventFormData.facilityId}
+                          onChange={(e) => setEventFormData({ ...eventFormData, facilityId: e.target.value })}
+                          className="form-input-dict"
+                        >
+                          <option value="">Seçiniz</option>
+                          {(eventDictionaries.facilityId || []).map((opt) => (
+                            <option key={opt.code} value={opt.code}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Person (searchable) */}
+                    <div className="form-group-dict" style={{ position: 'relative' }}>
+                      <label htmlFor="personSearch">İlgili Kişi</label>
+                      <div style={{ position: 'relative' }}>
+                        <input
+                          type="text"
+                          id="personSearch"
+                          value={personSearchTerm}
+                          onChange={(e) => {
+                            setPersonSearchTerm(e.target.value)
+                            if (!e.target.value) {
+                              setEventFormData({ ...eventFormData, personId: '' })
+                            }
+                          }}
+                          placeholder="Kişi adı ile ara... (min 2 karakter)"
+                          className="form-input-dict"
+                          autoComplete="off"
+                        />
+                        {personSearchLoading && (
+                          <div style={{ 
+                            position: 'absolute', 
+                            right: '10px', 
+                            top: '50%', 
+                            transform: 'translateY(-50%)',
+                            fontSize: '12px',
+                            color: '#999'
+                          }}>
+                            ⏳ Aranıyor...
+                          </div>
+                        )}
+                      </div>
+                      {personSearchTerm.length > 0 && personSearchTerm.length < 2 && (
+                        <small className="form-hint" style={{ color: '#f59e0b' }}>
+                          En az 2 karakter girin
+                        </small>
+                      )}
+                      {!eventFormData.personId && personSearchTerm.length >= 2 && personSearchResults.length > 0 && (
+                        <div style={{ 
+                          position: 'absolute', 
+                          zIndex: 1000, 
+                          background: '#fff', 
+                          border: '1px solid #ddd',
+                          borderRadius: '4px',
+                          boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                          width: '100%',
+                          maxHeight: '200px',
+                          overflowY: 'auto',
+                          marginTop: '4px'
+                        }}>
+                          {personSearchResults.map((p) => (
+                            <div
+                              key={p.id}
+                              style={{ 
+                                padding: '10px 12px', 
+                                cursor: 'pointer',
+                                borderBottom: '1px solid #f0f0f0',
+                                transition: 'background 0.2s'
+                              }}
+                              onMouseEnter={(e) => e.target.style.background = '#f0f9ff'}
+                              onMouseLeave={(e) => e.target.style.background = '#fff'}
+                              onClick={() => {
+                                // First set the person info
+                                setEventFormData({ ...eventFormData, personId: p.id })
+                                setPersonSearchTerm(p.label)
+                                // Then clear results immediately
+                                setPersonSearchResults([])
+                              }}
+                            >
+                              {p.label}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {!eventFormData.personId && personSearchTerm.length >= 2 && personSearchResults.length === 0 && !personSearchLoading && (
+                        <small className="form-hint" style={{ color: '#ef4444' }}>
+                          Sonuç bulunamadı
+                        </small>
+                      )}
+                      {eventFormData.personId && (
+                        <small className="form-hint" style={{ color: '#10b981' }}>
+                          ✓ Kişi seçildi - {personSearchTerm}
+                          {' '}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEventFormData({ ...eventFormData, personId: '' })
+                              setPersonSearchTerm('')
+                            }}
+                            style={{
+                              fontSize: '11px',
+                              padding: '2px 6px',
+                              marginLeft: '8px',
+                              cursor: 'pointer',
+                              background: '#ef4444',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '3px'
+                            }}
+                          >
+                            Temizle
+                          </button>
+                        </small>
+                      )}
+                      {!eventFormData.personId && personSearchTerm.length < 2 && (
+                        <small className="form-hint">
+                          Veteriner, bakıcı vb.
+                        </small>
+                      )}
+                    </div>
+
+                    {/* Details (Notes) */}
+                    <div className="form-group-dict" style={{ gridColumn: '1 / -1' }}>
+                      <label htmlFor="details">Notlar</label>
+                      <textarea
+                        id="details"
+                        value={eventFormData.details}
+                        onChange={(e) => setEventFormData({ ...eventFormData, details: e.target.value })}
+                        placeholder="Etkinlik detayları, gözlemler vb."
+                        className="form-input-dict"
+                        rows="4"
+                      />
+                    </div>
+                  </div>
+                  </fieldset>
+
+                  <div className="modal-dict-footer">
+                    {editingEvent?.isReadOnly ? (
+                      <button type="button" className="btn btn-primary" onClick={() => setIsEventModalOpen(false)}>
+                        Kapat
+                      </button>
+                    ) : (
+                      <>
+                        <button type="button" className="btn btn-secondary" onClick={() => setIsEventModalOpen(false)}>
+                          İptal
+                        </button>
+                        <button type="submit" className="btn btn-primary">
+                          {editingEvent ? 'Güncelle' : 'Kaydet'}
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Notification */}
+          {notification && (
+            <div className={`notification notification-${notification.type}`}>
+              <div className="notification-content">
+                <span className="notification-icon">
+                  {notification.type === 'success' ? '✓' : '✕'}
+                </span>
+                <span className="notification-message">{notification.message}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Confirmation Modal */}
+          {confirmModal && (
+            <div className="modal-overlay-confirm">
+              <div className={`modal-confirm modal-confirm-${confirmModal.type}`}>
+                <div className="modal-confirm-header">
+                  <span className="modal-confirm-icon">{confirmModal.icon}</span>
+                  <h3 className="modal-confirm-title">{confirmModal.title}</h3>
+                </div>
+                <div className="modal-confirm-body">
+                  <p className="modal-confirm-message">{confirmModal.message}</p>
+                </div>
+                <div className="modal-confirm-footer">
+                  <button 
+                    type="button" 
+                    className="btn-confirm-cancel" 
+                    onClick={() => setConfirmModal(null)}
+                  >
+                    İptal
+                  </button>
+                  <button 
+                    type="button" 
+                    className={`btn-confirm-action btn-confirm-${confirmModal.type}`}
+                    onClick={() => {
+                      if (confirmModal.onConfirm) confirmModal.onConfirm()
+                      setConfirmModal(null)
+                    }}
+                  >
+                    {confirmModal.confirmText}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // Render animals list view
   return (
     <div className="dictionary-management">
       <div className="dictionary-content" style={{ gridColumn: '1 / -1' }}>
@@ -341,7 +1501,7 @@ export default function AnimalManagement() {
               Hayvanlar
             </h2>
             <p className="dictionary-subtitle">
-              Tüm hayvanları yönetin
+              Tüm hayvanları yönetin - Etkinlikleri görmek için hayvana tıklayın
             </p>
           </div>
           <button className="btn btn-primary" onClick={handleCreate}>
@@ -447,7 +1607,13 @@ export default function AnimalManagement() {
                     // Backend'den isActive artık kesin olarak geliyor ✅
                     const isActive = animal.isActive
                     return (
-                      <tr key={animal.id} className={!isActive ? 'row-inactive' : ''}>
+                      <tr 
+                        key={animal.id} 
+                        className={!isActive ? 'row-inactive' : ''}
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => handleAnimalClick(animal)}
+                        title="Hayvan etkinliklerini görüntülemek için tıklayın"
+                      >
                         <td>{index + 1}</td>
                         <td>
                           <strong>{animal.name}</strong>
@@ -459,18 +1625,24 @@ export default function AnimalManagement() {
                         <td>{animal.color || '-'}</td>
                         <td>{animal.size || '-'}</td>
                         <td>{animal.birthDate || '-'}</td>
-                        <td>
+                        <td onClick={(e) => e.stopPropagation()}>
                           <div className="action-buttons">
                             <button
                               className="action-btn edit"
-                              onClick={() => handleEdit(animal)}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleEdit(animal)
+                              }}
                               title="Düzenle"
                             >
                               ✏️
                             </button>
                             <button
                               className="action-btn delete"
-                              onClick={() => handleToggleActive(animal)}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleToggleActive(animal)
+                              }}
                               title="Arşivle / Aktif Et (Toggle)"
                             >
                               🔄
