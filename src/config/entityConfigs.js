@@ -315,7 +315,7 @@ export const ZONE_CONFIG = {
       field: 'facilityName', 
       label: 'Tesis', 
       width: '30%',
-      render: (item) => item.facilityName || '-'
+      render: (fieldValue, item) => item.facilityName || '-'
     },
     { field: 'purpose', label: 'Amaç', width: '25%' }
   ],
@@ -397,7 +397,7 @@ export const ASSET_CONFIG = {
       field: 'facilityName', 
       label: 'Tesis', 
       width: '20%',
-      render: (item) => item.facilityName || '-'
+      render: (fieldValue, item) => item.facilityName || '-'
     },
     { field: 'type', label: 'Tip', width: '15%' },
     { field: 'status', label: 'Durum', width: '15%' }
@@ -461,7 +461,7 @@ export const UNIT_CONFIG = {
       field: 'facilityName', 
       label: 'Tesis', 
       width: '25%',
-      render: (item) => item.facilityName || '-'
+      render: (fieldValue, item) => item.facilityName || '-'
     },
     { field: 'type', label: 'Tip', width: '15%' },
     { field: 'capacity', label: 'Kapasite', width: '10%' }
