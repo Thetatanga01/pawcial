@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { getDictionaryItems } from '../api/dictionary.js'
 import { getUserFriendlyErrorMessage, NOTIFICATION_DURATION, ERROR_NOTIFICATION_DURATION } from '../utils/errorHandler.js'
+import { isHardDeleteAllowed, getHardDeleteRemainingSeconds, formatRemainingTime, fetchHardDeleteWindowSeconds } from '../utils/hardDeleteHelper.js'
 
 /**
  * Generic Entity Management Component
@@ -30,6 +31,7 @@ export default function EntityManagement({
   const [notification, setNotification] = useState(null)
   const [confirmModal, setConfirmModal] = useState(null) // { title, message, onConfirm, confirmText, type, icon }
   const [dictionaries, setDictionaries] = useState({})
+  const [hardDeleteWindowSeconds, setHardDeleteWindowSeconds] = useState(300) // System parameter for hard delete
 
   // Form data
   const [formData, setFormData] = useState(
@@ -46,13 +48,20 @@ export default function EntityManagement({
     setTimeout(() => setNotification(null), duration)
   }
 
-  // Initialize searchValues based on config
+  // Initialize searchValues and formData when config changes
   useEffect(() => {
     const fields = Array.isArray(entityConfig.searchFields) ? entityConfig.searchFields : []
     const initial = fields.reduce((acc, f) => { acc[f] = ''; return acc }, {})
     setSearchValues(initial)
     setSearchTerm('')
     setCurrentPage(0)
+    
+    // Reset formData based on new config
+    const initialFormData = entityConfig.fields.reduce((acc, field) => {
+      acc[field.name] = ''
+      return acc
+    }, {})
+    setFormData(initialFormData)
   }, [entityConfig])
 
   // Reset page when filters change
@@ -73,9 +82,17 @@ export default function EntityManagement({
     }
   }, [showAll, searchTerm, JSON.stringify(searchValues), currentPage, pageSize])
 
-  // Load dictionaries
+  // Load dictionaries when entityConfig changes
   useEffect(() => {
     loadDictionaries()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [entityConfig])
+
+  // Load hard delete window parameter on mount
+  useEffect(() => {
+    fetchHardDeleteWindowSeconds().then(seconds => {
+      setHardDeleteWindowSeconds(seconds)
+    })
   }, [])
 
   const loadItems = useCallback(async () => {
@@ -219,7 +236,9 @@ export default function EntityManagement({
 
   const handleToggleActive = (item) => {
     // Backend'de DELETE endpoint artık toggle olarak çalışıyor
-    const itemName = entityConfig.getDisplayName ? entityConfig.getDisplayName(item) : item.id
+    const idFieldName = entityConfig.idField || 'id'
+    const itemId = item[idFieldName]
+    const itemName = entityConfig.getDisplayName ? entityConfig.getDisplayName(item) : itemId
     const isCurrentlyActive = item.isActive
     const action = isCurrentlyActive ? 'arşivlemek' : 'tekrar aktif etmek'
     const actionPast = isCurrentlyActive ? 'arşivlendi' : 'aktif edildi'
@@ -234,13 +253,47 @@ export default function EntityManagement({
       confirmText: isCurrentlyActive ? 'Arşivle' : 'Aktif Et',
       onConfirm: async () => {
         try {
-          await apiHelpers.delete(item.id) // Backend'de toggle olarak çalışıyor
+          await apiHelpers.delete(itemId) // Backend'de toggle olarak çalışıyor
           showNotification(`${entityConfig.labelSingle} başarıyla ${actionPast}!`, 'success')
           loadItems()
         } catch (error) {
           console.error('Error toggling item active status:', error)
           showNotification(getUserFriendlyErrorMessage(error, 'İşlem başarısız'), 'error')
         }
+      }
+    })
+  }
+
+  const handleHardDelete = (item) => {
+    const idFieldName = entityConfig.idField || 'id'
+    const itemId = item[idFieldName]
+    const itemName = entityConfig.getDisplayName ? entityConfig.getDisplayName(item) : itemId
+    const canDelete = isHardDeleteAllowed(item.createdAt, hardDeleteWindowSeconds)
+    const remainingSeconds = getHardDeleteRemainingSeconds(item.createdAt, hardDeleteWindowSeconds)
+    
+    if (!canDelete) {
+      showNotification(`Hard delete süresi dolmuş! Bu kayıt oluşturulduktan ${hardDeleteWindowSeconds} saniye sonra kalıcı olarak silinemez.`, 'error')
+      return
+    }
+    
+    const remainingTime = formatRemainingTime(remainingSeconds)
+    
+    setConfirmModal({
+      title: '⚠️ Kalıcı Silme',
+      message: `"${itemName}" kaydını KALICI olarak silmek istediğinizden emin misiniz?\n\n⚠️ BU İŞLEM GERİ ALINAMAZ!\n\nKalan süre: ${remainingTime}`,
+      icon: '🗑️',
+      type: 'danger',
+      confirmText: 'Kalıcı Olarak Sil',
+      onConfirm: async () => {
+        try {
+          await apiHelpers.hardDelete(itemId)
+          showNotification(`${entityConfig.labelSingle} kalıcı olarak silindi!`, 'success')
+          loadItems()
+        } catch (error) {
+          console.error('Error hard deleting item:', error)
+          showNotification(getUserFriendlyErrorMessage(error, `${entityConfig.labelSingle} silinirken hata oluştu`), 'error')
+        }
+        setConfirmModal(null)
       }
     })
   }
@@ -256,7 +309,9 @@ export default function EntityManagement({
       }, {})
 
       if (editingItem) {
-        await apiHelpers.update(editingItem.id, cleanedData)
+        const idFieldName = entityConfig.idField || 'id'
+        const itemId = editingItem[idFieldName]
+        await apiHelpers.update(itemId, cleanedData)
         showNotification(`${entityConfig.labelSingle} başarıyla güncellendi!`, 'success')
       } else {
         await apiHelpers.create(cleanedData)
@@ -292,6 +347,8 @@ export default function EntityManagement({
             required={field.required}
             placeholder={field.placeholder}
             className="form-input-dict"
+            readOnly={field.readOnlyOnEdit && editingItem}
+            disabled={field.readOnlyOnEdit && editingItem}
           />
         )
 
@@ -506,6 +563,15 @@ export default function EntityManagement({
                             >
                               🔄
                             </button>
+                            {isHardDeleteAllowed(item.createdAt, hardDeleteWindowSeconds) && (
+                              <button
+                                className="action-btn hard-delete"
+                                onClick={() => handleHardDelete(item)}
+                                title={`Kalıcı Sil (Kalan süre: ${formatRemainingTime(getHardDeleteRemainingSeconds(item.createdAt, hardDeleteWindowSeconds))})`}
+                              >
+                                🗑️
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

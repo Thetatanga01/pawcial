@@ -178,6 +178,45 @@ export async function deleteDictionaryItem(dictionaryId, code) {
 }
 
 /**
+ * Hard delete a dictionary item (permanent deletion)
+ * Dictionary items can be hard deleted without time restriction
+ * @param {string} dictionaryId - Dictionary identifier
+ * @param {string} code - Item code
+ * @returns {Promise<void>}
+ */
+export async function hardDeleteDictionaryItem(dictionaryId, code) {
+  const endpoint = DICTIONARY_ENDPOINTS[dictionaryId]
+  if (!endpoint) {
+    throw new Error(`Unknown dictionary: ${dictionaryId}`)
+  }
+
+  try {
+    const url = `${API_BASE_URL}/${endpoint}/${code}/hard-delete`
+    console.log('Hard deleting dictionary item:', { dictionaryId, endpoint, code, url })
+    
+    const response = await fetch(url, {
+      method: 'DELETE'
+    })
+    
+    console.log('Hard delete response:', {
+      status: response.status,
+      statusText: response.statusText
+    })
+    
+    if (!response.ok) {
+      const errorText = await response.text()
+      throw new Error(`HTTP error! status: ${response.status}\nDetails: ${errorText}`)
+    }
+    
+    console.log('Hard delete success')
+  } catch (error) {
+    console.error(`Error hard deleting dictionary item for ${dictionaryId}:`, error)
+    console.error('Error stack:', error.stack)
+    throw error
+  }
+}
+
+/**
  * Update a dictionary item's label
  * Backend supports updating only the label field
  * @param {string} dictionaryId - Dictionary identifier

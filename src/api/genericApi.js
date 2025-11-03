@@ -224,6 +224,26 @@ export function createApiHelpers(endpoint) {
         console.error(`Error deleting ${endpoint}:`, error);
         throw error;
       }
+    },
+
+    async hardDelete(id) {
+      try {
+        console.log(`Hard deleting ${endpoint}:`, id);
+        const response = await fetch(`${API_BASE_URL}/${endpoint}/${id}/hard-delete`, {
+          method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        console.log(`${endpoint} hard deleted successfully`);
+        return true;
+      } catch (error) {
+        console.error(`Error hard deleting ${endpoint}:`, error);
+        throw error;
+      }
     }
   };
 }

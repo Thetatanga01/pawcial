@@ -148,7 +148,7 @@ export async function updateAnimal(id, animalData) {
 }
 
 /**
- * Delete animal (or toggle active status)
+ * Delete animal (soft delete - toggle active status)
  */
 export async function deleteAnimal(id) {
   try {
@@ -171,6 +171,34 @@ export async function deleteAnimal(id) {
     return true;
   } catch (error) {
     console.error('Error deleting animal:', error, error.stack);
+    throw error;
+  }
+}
+
+/**
+ * Hard delete animal (permanent deletion - only allowed within time window)
+ */
+export async function hardDeleteAnimal(id) {
+  try {
+    console.log('Hard deleting animal:', id);
+    console.log('HARD DELETE URL:', `${API_BASE_URL}/animals/${id}/hard-delete`);
+    
+    const response = await fetch(`${API_BASE_URL}/animals/${id}/hard-delete`, {
+      method: 'DELETE'
+    });
+    
+    console.log('Response status:', response.status);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error response body:', errorText);
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    console.log('Animal hard deleted successfully');
+    return true;
+  } catch (error) {
+    console.error('Error hard deleting animal:', error, error.stack);
     throw error;
   }
 }

@@ -488,6 +488,59 @@ export const UNIT_CONFIG = {
   getDisplayName: (item) => item.code
 };
 
+export const SYSTEM_PARAMETER_CONFIG = {
+  icon: '⚙️',
+  labelSingle: 'Sistem Parametresi',
+  labelPlural: 'Sistem Parametreleri',
+  description: 'Sistem parametrelerini yönetin',
+  searchFields: ['code', 'label'],
+  formLayout: 'grid',
+  idField: 'code', // System parameters use 'code' as primary key instead of 'id'
+  
+  fields: [
+    {
+      name: 'code',
+      label: 'Parametre Kodu',
+      type: 'text',
+      required: true,
+      placeholder: 'Örn: HARD_DELETE_WINDOW_SECONDS',
+      readOnlyOnEdit: true // Code cannot be changed after creation
+    },
+    {
+      name: 'label',
+      label: 'Açıklama Etiketi',
+      type: 'text',
+      required: true,
+      placeholder: 'Örn: Hard Delete Time Window (Seconds)'
+    },
+    {
+      name: 'parameterValue',
+      label: 'Parametre Değeri',
+      type: 'text',
+      required: true,
+      placeholder: 'Örn: 300'
+    },
+    {
+      name: 'description',
+      label: 'Detaylı Açıklama',
+      type: 'textarea',
+      required: false,
+      fullWidth: true,
+      rows: 3,
+      placeholder: 'Parametrenin detaylı açıklaması...'
+    }
+  ],
+
+  tableColumns: [
+    { field: 'code', label: 'Kod', width: '25%' },
+    { field: 'label', label: 'Etiket', width: '25%' },
+    { field: 'parameterValue', label: 'Değer', width: '15%' },
+    { field: 'description', label: 'Açıklama', width: '35%' }
+  ],
+
+  getDisplayName: (item) => item.code
+};
+
 export const ANIMAL_EVENT_CONFIG = {
   icon: '📅',
   labelSingle: 'Hayvan Etkinliği',

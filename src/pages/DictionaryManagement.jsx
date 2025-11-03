@@ -3,7 +3,8 @@ import {
   getDictionaryItems, 
   createDictionaryItem,
   updateDictionaryItem,
-  deleteDictionaryItem 
+  deleteDictionaryItem,
+  hardDeleteDictionaryItem
 } from '../api/dictionary.js'
 import { createApiHelpers } from '../api/genericApi.js'
 import { getUserFriendlyErrorMessage, NOTIFICATION_DURATION, ERROR_NOTIFICATION_DURATION } from '../utils/errorHandler.js'
@@ -151,6 +152,20 @@ export default function DictionaryManagement({ selectedDictionaryId }) {
       await loadDictionaryItems()
     } catch (error) {
       console.error('Error toggling item:', error)
+      showNotification(getUserFriendlyErrorMessage(error, 'İşlem başarısız'), 'error')
+    }
+  }
+
+  const handleHardDelete = async (item) => {
+    if (!confirm(`⚠️ DİKKAT! "${item.label}" kaydını KALICI olarak silmek istediğinizden emin misiniz?\n\n⚠️ BU İŞLEM GERİ ALINAMAZ!\n\nDictionary kayıtları zaman sınırlaması olmadan kalıcı olarak silinebilir.`)) return
+    
+    try {
+      await hardDeleteDictionaryItem(selectedDictionary.id, item.code)
+      showNotification('Kayıt kalıcı olarak silindi!', 'success')
+      // Listeyi yeniden yükle
+      await loadDictionaryItems()
+    } catch (error) {
+      console.error('Error hard deleting item:', error)
       showNotification(getUserFriendlyErrorMessage(error, 'İşlem başarısız'), 'error')
     }
   }
@@ -336,6 +351,13 @@ export default function DictionaryManagement({ selectedDictionaryId }) {
                             title="Arşivle / Aktif Et"
                           >
                               🔄
+                          </button>
+                          <button
+                            className="action-btn hard-delete"
+                            onClick={() => handleHardDelete(item)}
+                            title="Kalıcı Sil (Dictionary'ler için zaman sınırı yok)"
+                          >
+                              🗑️
                           </button>
                         </div>
                       </td>

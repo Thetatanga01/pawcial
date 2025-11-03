@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { getAnimals, createAnimal, updateAnimal, deleteAnimal, searchAnimals } from '../api/animals.js'
+import { getAnimals, createAnimal, updateAnimal, deleteAnimal, hardDeleteAnimal, searchAnimals } from '../api/animals.js'
 import { getDictionaryItems } from '../api/dictionary.js'
 import { createApiHelpers } from '../api/genericApi.js'
 import { getUserFriendlyErrorMessage, NOTIFICATION_DURATION, ERROR_NOTIFICATION_DURATION } from '../utils/errorHandler.js'
+import { isHardDeleteAllowed, getHardDeleteRemainingSeconds, formatRemainingTime, fetchHardDeleteWindowSeconds } from '../utils/hardDeleteHelper.js'
 
 const animalEventApi = createApiHelpers('animal-events')
 const personsApi = createApiHelpers('persons')
@@ -19,6 +20,7 @@ export default function AnimalManagement() {
   const [showAll, setShowAll] = useState(false) // Backend'in 'all' parametresi
   const [notification, setNotification] = useState(null)
   const [confirmModal, setConfirmModal] = useState(null) // { title, message, onConfirm, confirmText, type, isActive }
+  const [hardDeleteWindowSeconds, setHardDeleteWindowSeconds] = useState(300) // System parameter for hard delete
   
   // Animal Events states
   const [events, setEvents] = useState([])
@@ -185,6 +187,13 @@ export default function AnimalManagement() {
   // Load dictionary data
   useEffect(() => {
     loadDictionaries()
+  }, [])
+
+  // Load hard delete window parameter
+  useEffect(() => {
+    fetchHardDeleteWindowSeconds().then(seconds => {
+      setHardDeleteWindowSeconds(seconds)
+    })
   }, [])
 
   // Filter breeds when species changes
@@ -359,6 +368,37 @@ export default function AnimalManagement() {
           console.error('Error toggling animal active status:', error)
           showNotification(getUserFriendlyErrorMessage(error, 'İşlem başarısız'), 'error')
         }
+      }
+    })
+  }
+
+  const handleHardDeleteAnimal = (animal) => {
+    const canDelete = isHardDeleteAllowed(animal.createdAt, hardDeleteWindowSeconds)
+    const remainingSeconds = getHardDeleteRemainingSeconds(animal.createdAt, hardDeleteWindowSeconds)
+    
+    if (!canDelete) {
+      showNotification(`Hard delete süresi dolmuş! Bu kayıt oluşturulduktan ${hardDeleteWindowSeconds} saniye sonra kalıcı olarak silinemez.`, 'error')
+      return
+    }
+    
+    const remainingTime = formatRemainingTime(remainingSeconds)
+    
+    setConfirmModal({
+      title: '⚠️ Kalıcı Silme',
+      message: `"${animal.name}" adlı hayvanı KALICI olarak silmek istediğinizden emin misiniz?\n\n⚠️ BU İŞLEM GERİ ALINAMAZ!\n\nKalan süre: ${remainingTime}`,
+      icon: '🗑️',
+      type: 'danger',
+      confirmText: 'Kalıcı Olarak Sil',
+      onConfirm: async () => {
+        try {
+          await hardDeleteAnimal(animal.id)
+          showNotification('Hayvan kalıcı olarak silindi!', 'success')
+          loadAnimals()
+        } catch (error) {
+          console.error('Error hard deleting animal:', error)
+          showNotification(getUserFriendlyErrorMessage(error, 'Hayvan silinirken hata oluştu'), 'error')
+        }
+        setConfirmModal(null)
       }
     })
   }
@@ -1655,6 +1695,18 @@ export default function AnimalManagement() {
                             >
                               🔄
                             </button>
+                            {isHardDeleteAllowed(animal.createdAt, hardDeleteWindowSeconds) && (
+                              <button
+                                className="action-btn hard-delete"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  handleHardDeleteAnimal(animal)
+                                }}
+                                title={`Kalıcı Sil (Kalan süre: ${formatRemainingTime(getHardDeleteRemainingSeconds(animal.createdAt, hardDeleteWindowSeconds))})`}
+                              >
+                                🗑️
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>
