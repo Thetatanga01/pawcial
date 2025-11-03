@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { getDictionaryItems } from '../api/dictionary.js'
+import { getUserFriendlyErrorMessage, NOTIFICATION_DURATION, ERROR_NOTIFICATION_DURATION } from '../utils/errorHandler.js'
 
 /**
  * Generic Entity Management Component
@@ -41,7 +42,8 @@ export default function EntityManagement({
   // Notification helper
   const showNotification = (message, type = 'success') => {
     setNotification({ message, type })
-    setTimeout(() => setNotification(null), 3000)
+    const duration = type === 'error' ? ERROR_NOTIFICATION_DURATION : NOTIFICATION_DURATION
+    setTimeout(() => setNotification(null), duration)
   }
 
   // Initialize searchValues based on config
@@ -118,7 +120,7 @@ export default function EntityManagement({
       setHasPrevious(response.hasPrevious || false)
     } catch (error) {
       console.error('Error loading items:', error)
-      showNotification(`${entityConfig.labelPlural} yüklenirken hata oluştu`, 'error')
+      showNotification(getUserFriendlyErrorMessage(error, `${entityConfig.labelPlural} yüklenirken hata oluştu`), 'error')
       setItems([])
       setTotalElements(0)
       setTotalPages(0)
@@ -144,7 +146,8 @@ export default function EntityManagement({
               console.log(`Loaded ${data.length} items from dictionary ${field.dictionary}`)
             } else if (field.entityEndpoint) {
               // Load from entity API
-              const url = `http://localhost:8000/api/${field.entityEndpoint}?all=true`
+              // Dropdown için tüm kayıtları çek (size=1000 ile pagination'ı aş)
+              const url = `http://localhost:8000/api/${field.entityEndpoint}?all=true&size=1000`
               console.log(`Loading entity from: ${url}`)
               const response = await fetch(url)
               console.log(`Entity response status: ${response.status}`)
@@ -236,7 +239,7 @@ export default function EntityManagement({
           loadItems()
         } catch (error) {
           console.error('Error toggling item active status:', error)
-          showNotification('İşlem başarısız: ' + error.message, 'error')
+          showNotification(getUserFriendlyErrorMessage(error, 'İşlem başarısız'), 'error')
         }
       }
     })
@@ -265,7 +268,7 @@ export default function EntityManagement({
       loadItems()
     } catch (error) {
       console.error('Error saving item:', error)
-      showNotification('Kayıt işlemi başarısız: ' + error.message, 'error')
+      showNotification(getUserFriendlyErrorMessage(error, 'Kayıt işlemi başarısız'), 'error')
     }
   }
 
@@ -483,7 +486,7 @@ export default function EntityManagement({
                         <td>{index + 1}</td>
                         {entityConfig.tableColumns.map((col, idx) => (
                           <td key={idx}>
-                            {col.render ? col.render(item[col.field], item) : (item[col.field] || '-')}
+                            {col.render ? col.render(item[col.field], item, dictionaries) : (item[col.field] || '-')}
                             {idx === 0 && !isActive && <span className="badge-archived">Arşiv</span>}
                           </td>
                         ))}

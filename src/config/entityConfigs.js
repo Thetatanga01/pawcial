@@ -1,5 +1,15 @@
 // Entity configuration definitions
 
+// Helper function to render dictionary code as label
+const renderDictionaryLabel = (dictionaryFieldName) => {
+  return (fieldValue, item, dictionaries) => {
+    if (!fieldValue) return '-'
+    const dict = dictionaries?.[dictionaryFieldName] || []
+    const dictItem = dict.find(d => d.code === fieldValue)
+    return dictItem ? dictItem.label : fieldValue
+  }
+}
+
 export const SPECIES_CONFIG = {
   icon: '🦁',
   labelSingle: 'Tür',
@@ -36,7 +46,7 @@ export const SPECIES_CONFIG = {
   tableColumns: [
     { field: 'scientificName', label: 'Bilimsel Adı', width: '40%' },
     { field: 'commonName', label: 'Yaygın Adı', width: '30%' },
-    { field: 'domesticStatus', label: 'Evcillik Durumu', width: '30%' }
+    { field: 'domesticStatus', label: 'Evcillik Durumu', width: '30%', render: renderDictionaryLabel('domesticStatus') }
   ],
 
   getDisplayName: (item) => item.commonName || item.scientificName
@@ -210,8 +220,8 @@ export const VOLUNTEER_CONFIG = {
 
   tableColumns: [
     { field: 'personId', label: 'Kişi ID', width: '15%' },
-    { field: 'volunteerAreaCode', label: 'Alan', width: '25%' },
-    { field: 'volunteerStatusCode', label: 'Durum', width: '20%' },
+    { field: 'volunteerAreaCode', label: 'Alan', width: '25%', render: renderDictionaryLabel('volunteerAreaCode') },
+    { field: 'volunteerStatusCode', label: 'Durum', width: '20%', render: renderDictionaryLabel('volunteerStatusCode') },
     { field: 'startDate', label: 'Başlangıç', width: '20%' }
   ],
 
@@ -267,7 +277,7 @@ export const FACILITY_CONFIG = {
 
   tableColumns: [
     { field: 'name', label: 'Tesis Adı', width: '30%' },
-    { field: 'type', label: 'Tip', width: '15%' },
+    { field: 'type', label: 'Tip', width: '15%', render: renderDictionaryLabel('type') },
     { field: 'city', label: 'Şehir', width: '15%' },
     { field: 'country', label: 'Ülke', width: '15%' }
   ],
@@ -317,7 +327,7 @@ export const ZONE_CONFIG = {
       width: '30%',
       render: (fieldValue, item) => item.facilityName || '-'
     },
-    { field: 'purpose', label: 'Amaç', width: '25%' }
+    { field: 'purpose', label: 'Amaç', width: '25%', render: renderDictionaryLabel('purpose') }
   ],
 
   getDisplayName: (item) => item.name
@@ -399,8 +409,8 @@ export const ASSET_CONFIG = {
       width: '20%',
       render: (fieldValue, item) => item.facilityName || '-'
     },
-    { field: 'type', label: 'Tip', width: '15%' },
-    { field: 'status', label: 'Durum', width: '15%' }
+    { field: 'type', label: 'Tip', width: '15%', render: renderDictionaryLabel('type') },
+    { field: 'status', label: 'Durum', width: '15%', render: renderDictionaryLabel('status') }
   ],
 
   getDisplayName: (item) => `${item.code} - ${item.name}`
@@ -411,7 +421,7 @@ export const UNIT_CONFIG = {
   labelSingle: 'Birim',
   labelPlural: 'Birimler',
   description: 'Tesis birimlerini yönetin',
-  searchFields: ['code', 'facilityName'],
+  searchFields: ['code', 'facilityName', 'zoneName'],
   formLayout: 'grid',
   
   fields: [
@@ -432,11 +442,14 @@ export const UNIT_CONFIG = {
       placeholder: 'Örn: UNIT001'
     },
     {
-      name: 'name',
-      label: 'Birim Adı',
-      type: 'text',
+      name: 'zoneId',
+      label: 'Bölge',
+      type: 'select',
+      entityEndpoint: 'facility-zones',
+      entityValueField: 'id',
+      entityLabelField: 'name',
       required: false,
-      placeholder: 'Örn: A Blok Kafes 1'
+      hint: 'Birim bir bölgeye bağlıysa seçiniz'
     },
     {
       name: 'type',
@@ -456,18 +469,23 @@ export const UNIT_CONFIG = {
 
   tableColumns: [
     { field: 'code', label: 'Kod', width: '15%' },
-    { field: 'name', label: 'Birim Adı', width: '25%' },
     { 
       field: 'facilityName', 
       label: 'Tesis', 
       width: '25%',
       render: (fieldValue, item) => item.facilityName || '-'
     },
-    { field: 'type', label: 'Tip', width: '15%' },
+    { 
+      field: 'zoneName', 
+      label: 'Bölge', 
+      width: '20%',
+      render: (fieldValue, item) => item.zoneName || '-'
+    },
+    { field: 'type', label: 'Tip', width: '15%', render: renderDictionaryLabel('type') },
     { field: 'capacity', label: 'Kapasite', width: '10%' }
   ],
 
-  getDisplayName: (item) => item.code || item.name
+  getDisplayName: (item) => item.code
 };
 
 export const ANIMAL_EVENT_CONFIG = {

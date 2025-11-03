@@ -6,6 +6,7 @@ import {
   deleteDictionaryItem 
 } from '../api/dictionary.js'
 import { createApiHelpers } from '../api/genericApi.js'
+import { getUserFriendlyErrorMessage, NOTIFICATION_DURATION, ERROR_NOTIFICATION_DURATION } from '../utils/errorHandler.js'
 
 // Dictionary configurations
 // supportsUpdate: Backend'de PUT endpoint'i var mı? (Swagger'dan kontrol edildi - 2025-10-25)
@@ -58,7 +59,8 @@ export default function DictionaryManagement({ selectedDictionaryId }) {
   // Notification gösterme fonksiyonu
   const showNotification = (message, type = 'success') => {
     setNotification({ message, type })
-    setTimeout(() => setNotification(null), 3000)
+    const duration = type === 'error' ? ERROR_NOTIFICATION_DURATION : NOTIFICATION_DURATION
+    setTimeout(() => setNotification(null), duration)
   }
 
   // selectedDictionaryId prop değiştiğinde dictionary'yi güncelle
@@ -91,7 +93,7 @@ export default function DictionaryManagement({ selectedDictionaryId }) {
       setItems(itemsWithId)
     } catch (error) {
       console.error('Error loading items:', error)
-      showNotification('Veri yüklenirken hata oluştu. Backend sunucusunun çalıştığından emin olun.', 'error')
+      showNotification(getUserFriendlyErrorMessage(error, 'Veri yüklenirken hata oluştu'), 'error')
       setItems([])
     } finally {
       setLoading(false)
@@ -149,7 +151,7 @@ export default function DictionaryManagement({ selectedDictionaryId }) {
       await loadDictionaryItems()
     } catch (error) {
       console.error('Error toggling item:', error)
-      showNotification('İşlem başarısız: ' + error.message, 'error')
+      showNotification(getUserFriendlyErrorMessage(error, 'İşlem başarısız'), 'error')
     }
   }
 
@@ -187,7 +189,7 @@ export default function DictionaryManagement({ selectedDictionaryId }) {
       await loadDictionaryItems()
     } catch (error) {
       console.error('Error saving item:', error)
-      showNotification('Kayıt işlemi başarısız: ' + error.message, 'error')
+      showNotification(getUserFriendlyErrorMessage(error, 'Kayıt işlemi başarısız'), 'error')
     }
   }
 

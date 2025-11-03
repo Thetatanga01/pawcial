@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { getAnimals, createAnimal, updateAnimal, deleteAnimal, searchAnimals } from '../api/animals.js'
 import { getDictionaryItems } from '../api/dictionary.js'
 import { createApiHelpers } from '../api/genericApi.js'
+import { getUserFriendlyErrorMessage, NOTIFICATION_DURATION, ERROR_NOTIFICATION_DURATION } from '../utils/errorHandler.js'
 
 const animalEventApi = createApiHelpers('animal-events')
 const personsApi = createApiHelpers('persons')
@@ -109,7 +110,8 @@ export default function AnimalManagement() {
   // Notification helper
   const showNotification = (message, type = 'success') => {
     setNotification({ message, type })
-    setTimeout(() => setNotification(null), 3000)
+    const duration = type === 'error' ? ERROR_NOTIFICATION_DURATION : NOTIFICATION_DURATION
+    setTimeout(() => setNotification(null), duration)
   }
 
   // Load animals - checks if any search filter is active
@@ -146,7 +148,7 @@ export default function AnimalManagement() {
       setHasPrevious(response.hasPrevious || false)
     } catch (error) {
       console.error('Error loading animals:', error)
-      showNotification('Hayvanlar yüklenirken hata oluştu', 'error')
+      showNotification(getUserFriendlyErrorMessage(error, 'Hayvanlar yüklenirken hata oluştu'), 'error')
       setAnimals([])
       setTotalElements(0)
       setTotalPages(0)
@@ -201,9 +203,12 @@ export default function AnimalManagement() {
       // Load species from entity API
       const loadSpecies = async () => {
         try {
-          const response = await fetch('http://localhost:8000/api/species')
+          // Dropdown için tüm türleri çek (size=1000 ile pagination'ı aş)
+          const response = await fetch('http://localhost:8000/api/species?size=1000')
           if (response.ok) {
-            const entities = await response.json()
+            const data = await response.json()
+            const entities = data.content || data // Backend paginated response: { content: [...] }
+            console.log(`Loaded ${entities.length} species for dropdown`)
             return entities.map(entity => ({
               code: entity.id,
               label: entity.commonName || entity.scientificName
@@ -219,9 +224,12 @@ export default function AnimalManagement() {
       // Load breeds from entity API (with speciesId)
       const loadBreeds = async () => {
         try {
-          const response = await fetch('http://localhost:8000/api/breeds')
+          // Dropdown için tüm ırkları çek (size=1000 ile pagination'ı aş)
+          const response = await fetch('http://localhost:8000/api/breeds?size=1000')
           if (response.ok) {
-            const entities = await response.json()
+            const data = await response.json()
+            const entities = data.content || data // Backend paginated response: { content: [...] }
+            console.log(`Loaded ${entities.length} breeds for dropdown`)
             return entities.map(entity => ({
               code: entity.id,
               label: entity.name,
@@ -349,7 +357,7 @@ export default function AnimalManagement() {
           loadAnimals()
         } catch (error) {
           console.error('Error toggling animal active status:', error)
-          showNotification('İşlem başarısız: ' + error.message, 'error')
+          showNotification(getUserFriendlyErrorMessage(error, 'İşlem başarısız'), 'error')
         }
       }
     })
@@ -377,7 +385,7 @@ export default function AnimalManagement() {
       loadAnimals()
     } catch (error) {
       console.error('Error saving animal:', error)
-      showNotification('Kayıt işlemi başarısız: ' + error.message, 'error')
+      showNotification(getUserFriendlyErrorMessage(error, 'Kayıt işlemi başarısız'), 'error')
     }
   }
 
@@ -413,7 +421,7 @@ export default function AnimalManagement() {
       }
     } catch (error) {
       console.error('Error loading events:', error)
-      showNotification('Etkinlikler yüklenirken hata oluştu', 'error')
+      showNotification(getUserFriendlyErrorMessage(error, 'Etkinlikler yüklenirken hata oluştu'), 'error')
       setEvents([])
     } finally {
       setEventsLoading(false)
@@ -435,15 +443,15 @@ export default function AnimalManagement() {
         volunteersRaw
       ] = await Promise.all([
         // EventType entity'den çek (dictionary değil!)
-        fetch('http://localhost:8000/api/event-types')
+        fetch('http://localhost:8000/api/event-types?size=1000')
           .then(res => res.json())
           .then(data => (data.content || data))
           .catch(() => []),
-        fetch('http://localhost:8000/api/facilities')
+        fetch('http://localhost:8000/api/facilities?size=1000')
           .then(res => res.json())
           .then(data => (data.content || data))
           .catch(() => []),
-        fetch('http://localhost:8000/api/facility-units')
+        fetch('http://localhost:8000/api/facility-units?size=1000')
           .then(res => res.json())
           .then(data => (data.content || data))
           .catch(() => []),
@@ -453,7 +461,7 @@ export default function AnimalManagement() {
         getDictionaryItems('med-event-type').catch(() => []),
         getDictionaryItems('vaccine').catch(() => []),
         getDictionaryItems('dose-route').catch(() => []),
-        fetch('http://localhost:8000/api/volunteers')
+        fetch('http://localhost:8000/api/volunteers?size=1000')
           .then(res => res.json())
           .then(data => (data.content || data))
           .catch(() => [])
@@ -648,7 +656,7 @@ export default function AnimalManagement() {
           loadAnimalEvents(selectedAnimal.id)
         } catch (error) {
           console.error('Error toggling event:', error)
-          showNotification('İşlem başarısız: ' + error.message, 'error')
+          showNotification(getUserFriendlyErrorMessage(error, 'İşlem başarısız'), 'error')
         }
       }
     })
@@ -724,7 +732,7 @@ export default function AnimalManagement() {
       loadAnimalEvents(selectedAnimal.id)
     } catch (error) {
       console.error('Error saving event:', error)
-      showNotification('Kayıt işlemi başarısız: ' + error.message, 'error')
+      showNotification(getUserFriendlyErrorMessage(error, 'Kayıt işlemi başarısız'), 'error')
     }
   }
 
@@ -1621,9 +1629,9 @@ export default function AnimalManagement() {
                         </td>
                         <td>{animal.speciesName || '-'}</td>
                         <td>{animal.breedName || '-'}</td>
-                        <td>{animal.sex || '-'}</td>
-                        <td>{animal.color || '-'}</td>
-                        <td>{animal.size || '-'}</td>
+                        <td>{animal.sex ? (sexes.find(s => s.code === animal.sex)?.label || animal.sex) : '-'}</td>
+                        <td>{animal.color ? (colors.find(c => c.code === animal.color)?.label || animal.color) : '-'}</td>
+                        <td>{animal.size ? (sizes.find(s => s.code === animal.size)?.label || animal.size) : '-'}</td>
                         <td>{animal.birthDate || '-'}</td>
                         <td onClick={(e) => e.stopPropagation()}>
                           <div className="action-buttons">

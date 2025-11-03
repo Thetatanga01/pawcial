@@ -44,7 +44,8 @@ export async function getDictionaryItems(dictionaryId) {
   }
 
   try {
-    const url = `${API_BASE_URL}/${endpoint}`
+    // Dropdown için tüm kayıtları çek (size=1000 ile pagination varsa tümünü al)
+    const url = `${API_BASE_URL}/${endpoint}?size=1000`
     console.log('Fetching dictionary items:', { dictionaryId, endpoint, url })
     
     const response = await fetch(url)
@@ -59,7 +60,9 @@ export async function getDictionaryItems(dictionaryId) {
       throw new Error(`HTTP error! status: ${response.status}\nDetails: ${errorText}`)
     }
     
-    const result = await response.json()
+    const data = await response.json()
+    // Backend response direkt array veya {content: []} olabilir
+    const result = data.content || data
     console.log(`Fetched ${result.length} items from ${dictionaryId}`)
     return result
   } catch (error) {
