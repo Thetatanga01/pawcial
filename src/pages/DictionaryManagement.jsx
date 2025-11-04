@@ -7,7 +7,7 @@ import {
   hardDeleteDictionaryItem
 } from '../api/dictionary.js'
 import { createApiHelpers } from '../api/genericApi.js'
-import { getUserFriendlyErrorMessage, NOTIFICATION_DURATION, ERROR_NOTIFICATION_DURATION } from '../utils/errorHandler.js'
+import { getUserFriendlyErrorMessage, NOTIFICATION_DURATION, ERROR_NOTIFICATION_DURATION, normalizeTurkish } from '../utils/errorHandler.js'
 
 // Dictionary configurations
 // supportsUpdate: Backend'de PUT endpoint'i var mı? (Swagger'dan kontrol edildi - 2025-10-25)
@@ -55,6 +55,7 @@ export default function DictionaryManagement({ selectedDictionaryId }) {
   const [formData, setFormData] = useState({ code: '', label: '' })
   const [searchTerm, setSearchTerm] = useState('')
   const [sidebarSearchTerm, setSidebarSearchTerm] = useState('') // Sol menü için arama
+  const [showAll, setShowAll] = useState(false) // Arşivlenmiş kayıtları göster
   const [notification, setNotification] = useState(null)
   const [confirmModal, setConfirmModal] = useState(null) // { title, message, onConfirm, confirmText, type, icon }
 
@@ -78,14 +79,14 @@ export default function DictionaryManagement({ selectedDictionaryId }) {
   useEffect(() => {
     loadDictionaryItems()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDictionary.id])
+  }, [selectedDictionary.id, showAll])
 
   const loadDictionaryItems = async () => {
     setLoading(true)
     try {
-      // Dictionary için dictionary API kullan
-      const data = await getDictionaryItems(selectedDictionary.id)
-      console.log('Loaded dictionary items:', data)
+      // Dictionary için dictionary API kullan (showAll parametresi ile)
+      const data = await getDictionaryItems(selectedDictionary.id, showAll)
+      console.log('Loaded dictionary items:', data, 'showAll:', showAll)
       
       // Backend'den gelen data'da id yok, code'u id olarak kullan
       const itemsWithId = Array.isArray(data) ? data.map(item => ({ 
@@ -143,18 +144,18 @@ export default function DictionaryManagement({ selectedDictionaryId }) {
   }
 
   const handleToggle = (item) => {
-    const isCurrentlyActive = item.isActive
-    const action = isCurrentlyActive ? 'deaktive etmek' : 'aktif etmek'
-    const actionPast = isCurrentlyActive ? 'deaktive edildi' : 'aktif edildi'
+    const isCurrentlyActive = item.isActive !== false // Default true if not specified
+    const action = isCurrentlyActive ? 'arşivlemek' : 'tekrar aktif etmek'
+    const actionPast = isCurrentlyActive ? 'arşivlendi' : 'aktif edildi'
     const icon = isCurrentlyActive ? '📦' : '✅'
     const modalType = isCurrentlyActive ? 'warning' : 'success'
     
     setConfirmModal({
-      title: isCurrentlyActive ? 'Kaydı Deaktive Et' : 'Kaydı Aktif Et',
-      message: `"${item.label}" kaydını ${action} istediğinizden emin misiniz?${isCurrentlyActive ? '\n\n(Tekrar aktif etmek için backend\'e erişim gerekir)' : ''}`,
+      title: isCurrentlyActive ? 'Kaydı Arşivle' : 'Kaydı Aktif Et',
+      message: `"${item.label}" kaydını ${action} istediğinizden emin misiniz?`,
       icon: icon,
       type: modalType,
-      confirmText: isCurrentlyActive ? 'Deaktive Et' : 'Aktif Et',
+      confirmText: isCurrentlyActive ? 'Arşivle' : 'Aktif Et',
       onConfirm: async () => {
         try {
           // Dictionary için dictionary API kullan
@@ -232,17 +233,47 @@ export default function DictionaryManagement({ selectedDictionaryId }) {
   }
 
   const filteredItems = items.filter(item => {
+    // Backend'den gelen veriler zaten showAll parametresine göre filtrelenmiş
+    // Sadece arama filtresi uygula
     const searchLower = searchTerm.toLowerCase()
     const code = (item.code || '').toString().toLowerCase()
     const label = (item.label || '').toString().toLowerCase()
     return code.includes(searchLower) || label.includes(searchLower)
   })
 
-  // Sol menüdeki sözlükleri filtrele
-  const filteredDictionaries = DICTIONARIES.filter(dict =>
-    dict.label.toLowerCase().includes(sidebarSearchTerm.toLowerCase()) ||
-    dict.name.toLowerCase().includes(sidebarSearchTerm.toLowerCase())
-  )
+  // Sol menüdeki sözlükleri filtrele (Türkçe karakter desteği ile)
+  console.log('🔍 Sidebar search term:', sidebarSearchTerm)
+  
+  const filteredDictionaries = DICTIONARIES.filter(dict => {
+    if (!sidebarSearchTerm.trim()) return true // Arama yoksa hepsini göster
+    
+    console.log('Checking dictionary:', dict.label)
+    
+    const searchNormalized = normalizeTurkish(sidebarSearchTerm)
+    const labelNormalized = normalizeTurkish(dict.label)
+    const nameNormalized = normalizeTurkish(dict.name)
+    
+    console.log('Normalized values:', {
+      searchNormalized,
+      labelNormalized,
+      nameNormalized
+    })
+    
+    const labelMatch = labelNormalized.includes(searchNormalized)
+    const nameMatch = nameNormalized.includes(searchNormalized)
+    const matches = labelMatch || nameMatch
+    
+    console.log('Match result:', {
+      label: dict.label,
+      labelMatch,
+      nameMatch,
+      matches
+    })
+    
+    return matches
+  })
+  
+  console.log('Filtered dictionaries count:', filteredDictionaries.length)
 
   return (
     <div className="dictionary-management">
@@ -260,7 +291,13 @@ export default function DictionaryManagement({ selectedDictionaryId }) {
             type="text"
             placeholder="🔍 Tanım ara..."
             value={sidebarSearchTerm}
-            onChange={(e) => setSidebarSearchTerm(e.target.value)}
+            onChange={(e) => {
+              console.log('📝 Input onChange:', e.target.value)
+              setSidebarSearchTerm(e.target.value)
+            }}
+            onInput={(e) => {
+              console.log('⌨️ Input onInput:', e.target.value)
+            }}
             className="sidebar-search-input"
           />
           {sidebarSearchTerm && (
@@ -321,6 +358,17 @@ export default function DictionaryManagement({ selectedDictionaryId }) {
               className="search-input"
             />
           </div>
+          <div className="toolbar-actions">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={showAll}
+                onChange={(e) => setShowAll(e.target.checked)}
+                className="checkbox-input"
+              />
+              <span>Arşivi Göster</span>
+            </label>
+          </div>
           <div className="toolbar-info">
             <span className="item-count">{filteredItems.length} kayıt</span>
           </div>
@@ -350,14 +398,17 @@ export default function DictionaryManagement({ selectedDictionaryId }) {
                     </td>
                   </tr>
                 ) : (
-                  filteredItems.map((item, index) => (
-                    <tr key={item.code}>
-                      <td>{index + 1}</td>
-                      <td>
-                        <span className="code-badge">{item.code}</span>
-                      </td>
-                      <td>{item.label}</td>
-                      <td>
+                  filteredItems.map((item, index) => {
+                    const isActive = item.isActive !== false // Default true if not specified
+                    return (
+                      <tr key={item.code} style={!isActive ? { opacity: 0.6 } : {}}>
+                        <td>{index + 1}</td>
+                        <td>
+                          <span className="code-badge">{item.code}</span>
+                          {!isActive && <span className="badge-archived">Arşiv</span>}
+                        </td>
+                        <td>{item.label}</td>
+                        <td>
                         <div className="action-buttons">
                           {selectedDictionary.supportsUpdate && (
                             <button
@@ -385,7 +436,8 @@ export default function DictionaryManagement({ selectedDictionaryId }) {
                         </div>
                       </td>
                     </tr>
-                  ))
+                    )
+                  })
                 )}
               </tbody>
             </table>

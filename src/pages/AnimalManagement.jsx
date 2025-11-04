@@ -393,7 +393,7 @@ export default function AnimalManagement() {
       onConfirm: async () => {
         try {
           await deleteAnimal(animal.id) // Backend'de toggle olarak çalışıyor
-          showNotification(`Hayvan başarıyla ${actionPast}!`, isCurrentlyActive ? 'success' : 'success')
+          showNotification(`"${animal.name}" başarıyla ${actionPast}!`, 'success')
           loadAnimals()
         } catch (error) {
           console.error('Error toggling animal active status:', error)
@@ -423,11 +423,11 @@ export default function AnimalManagement() {
       onConfirm: async () => {
         try {
           await hardDeleteAnimal(animal.id)
-          showNotification('Hayvan kalıcı olarak silindi!', 'success')
+          showNotification(`"${animal.name}" kalıcı olarak silindi!`, 'success')
           loadAnimals()
         } catch (error) {
           console.error('Error hard deleting animal:', error)
-          showNotification(getUserFriendlyErrorMessage(error, 'Hayvan silinirken hata oluştu'), 'error')
+          showNotification(getUserFriendlyErrorMessage(error, `"${animal.name}" silinirken hata oluştu`), 'error')
         }
         setConfirmModal(null)
       }
@@ -444,11 +444,11 @@ export default function AnimalManagement() {
       if (editingAnimal) {
         console.log('Updating animal ID:', editingAnimal.id)
         await updateAnimal(editingAnimal.id, formData)
-        showNotification('Hayvan başarıyla güncellendi!', 'success')
+        showNotification(`"${formData.name}" başarıyla güncellendi!`, 'success')
       } else {
         console.log('Creating new animal')
         await createAnimal(formData)
-        showNotification('Hayvan başarıyla eklendi!', 'success')
+        showNotification(`"${formData.name}" başarıyla eklendi!`, 'success')
       }
 
       setIsModalOpen(false)

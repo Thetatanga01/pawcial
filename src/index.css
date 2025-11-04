@@ -1263,6 +1263,23 @@ body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto
   box-shadow: 0 0 0 3px rgba(255, 111, 67, 0.1);
 }
 
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.toolbar-actions .checkbox-label {
+  font-size: 14px;
+  color: var(--ink);
+  font-weight: 500;
+  user-select: none;
+}
+
+.toolbar-actions .checkbox-label:hover {
+  color: var(--brand);
+}
+
 .toolbar-info {
   display: flex;
   align-items: center;

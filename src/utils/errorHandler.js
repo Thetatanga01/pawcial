@@ -27,3 +27,27 @@ export const NOTIFICATION_DURATION = 6000 // 6 seconds (was 3 seconds)
  */
 export const ERROR_NOTIFICATION_DURATION = 8000 // 8 seconds for errors
 
+/**
+ * Normalize Turkish characters for search
+ * Converts Turkish characters to their ASCII equivalents
+ * @param {string} text - Text to normalize
+ * @returns {string} Normalized text
+ */
+export function normalizeTurkish(text) {
+  if (!text) return ''
+  
+  return text
+    .replace(/Ğ/g, 'g')
+    .replace(/Ü/g, 'u')
+    .replace(/Ş/g, 's')
+    .replace(/İ/g, 'i')
+    .replace(/Ö/g, 'o')
+    .replace(/Ç/g, 'c')
+    .replace(/ğ/g, 'g')
+    .replace(/ü/g, 'u')
+    .replace(/ş/g, 's')
+    .replace(/ı/g, 'i')
+    .replace(/ö/g, 'o')
+    .replace(/ç/g, 'c')
+    .toLowerCase()
+}

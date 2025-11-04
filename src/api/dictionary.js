@@ -35,9 +35,10 @@ const DICTIONARY_ENDPOINTS = {
 /**
  * Get all items from a dictionary
  * @param {string} dictionaryId - Dictionary identifier
+ * @param {boolean} showAll - Include archived/inactive items (default: false)
  * @returns {Promise<Array>} Array of dictionary items
  */
-export async function getDictionaryItems(dictionaryId) {
+export async function getDictionaryItems(dictionaryId, showAll = false) {
   const endpoint = DICTIONARY_ENDPOINTS[dictionaryId]
   if (!endpoint) {
     throw new Error(`Unknown dictionary: ${dictionaryId}`)
@@ -45,8 +46,12 @@ export async function getDictionaryItems(dictionaryId) {
 
   try {
     // Dropdown için tüm kayıtları çek (size=1000 ile pagination varsa tümünü al)
-    const url = `${API_BASE_URL}/${endpoint}?size=1000`
-    console.log('Fetching dictionary items:', { dictionaryId, endpoint, url })
+    const params = new URLSearchParams({
+      size: '1000',
+      all: showAll.toString()
+    })
+    const url = `${API_BASE_URL}/${endpoint}?${params}`
+    console.log('Fetching dictionary items:', { dictionaryId, endpoint, url, showAll })
     
     const response = await fetch(url)
     
