@@ -79,8 +79,13 @@ export default function AnimalManagement() {
   const [hasNext, setHasNext] = useState(false)
   const [hasPrevious, setHasPrevious] = useState(false)
   
-  // Debounce timer ref
+  // Debounce and tracking refs
   const searchDebounceRef = useRef(null)
+  const isInitialLoadRef = useRef(true) // Track initial load
+  const prevSearchNameRef = useRef('')
+  const prevSearchSpeciesRef = useRef('')
+  const prevSearchBreedRef = useRef('')
+  const prevShowAllRef = useRef(false)
 
   // Dictionary states
   const [species, setSpecies] = useState([])
@@ -159,22 +164,47 @@ export default function AnimalManagement() {
     }
   }, [searchName, searchSpecies, searchBreed, showAll, currentPage, pageSize])
 
-  // Reset page to 0 when search filters change
+  // Load animals with smart debouncing (single useEffect to avoid multiple triggers)
   useEffect(() => {
-    setCurrentPage(0)
-  }, [searchName, searchSpecies, searchBreed, showAll])
-
-  // Debounce search - 600ms delay after user stops typing
-  useEffect(() => {
-    // Clear previous timer
-    if (searchDebounceRef.current) {
-      clearTimeout(searchDebounceRef.current)
+    // Check if filters changed (not pagination)
+    const filtersChanged = (
+      searchName !== prevSearchNameRef.current ||
+      searchSpecies !== prevSearchSpeciesRef.current ||
+      searchBreed !== prevSearchBreedRef.current ||
+      showAll !== prevShowAllRef.current
+    )
+    
+    if (filtersChanged && currentPage !== 0) {
+      // Filters changed but we're not on page 0, reset to page 0
+      // This will trigger this useEffect again with currentPage=0
+      prevSearchNameRef.current = searchName
+      prevSearchSpeciesRef.current = searchSpecies
+      prevSearchBreedRef.current = searchBreed
+      prevShowAllRef.current = showAll
+      setCurrentPage(0)
+      return // Exit early, will be called again when currentPage updates
     }
-
-    // Set new timer - debounce only for search/filter changes, not for pagination
-    searchDebounceRef.current = setTimeout(() => {
+    
+    // Update tracking refs
+    prevSearchNameRef.current = searchName
+    prevSearchSpeciesRef.current = searchSpecies
+    prevSearchBreedRef.current = searchBreed
+    prevShowAllRef.current = showAll
+    
+    // Load animals with appropriate debouncing
+    if (isInitialLoadRef.current) {
+      // Initial load - no debounce, load immediately
+      isInitialLoadRef.current = false
       loadAnimals()
-    }, 600)
+    } else {
+      // Subsequent loads - debounce to avoid excessive API calls
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current)
+      }
+      searchDebounceRef.current = setTimeout(() => {
+        loadAnimals()
+      }, 600)
+    }
 
     // Cleanup
     return () => {
@@ -182,7 +212,8 @@ export default function AnimalManagement() {
         clearTimeout(searchDebounceRef.current)
       }
     }
-  }, [searchName, searchSpecies, searchBreed, showAll, currentPage, loadAnimals])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchName, searchSpecies, searchBreed, showAll, currentPage, pageSize])
 
   // Load dictionary data
   useEffect(() => {

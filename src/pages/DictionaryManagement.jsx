@@ -56,6 +56,7 @@ export default function DictionaryManagement({ selectedDictionaryId }) {
   const [searchTerm, setSearchTerm] = useState('')
   const [sidebarSearchTerm, setSidebarSearchTerm] = useState('') // Sol menü için arama
   const [notification, setNotification] = useState(null)
+  const [confirmModal, setConfirmModal] = useState(null) // { title, message, onConfirm, confirmText, type, icon }
 
   // Notification gösterme fonksiyonu
   const showNotification = (message, type = 'success') => {
@@ -141,33 +142,55 @@ export default function DictionaryManagement({ selectedDictionaryId }) {
     setIsModalOpen(true)
   }
 
-  const handleToggle = async (item) => {
-    if (!confirm(`"${item.label}" kaydını deaktive etmek istediğinizden emin misiniz? (Tekrar aktif etmek için backend'e erişim gerekir)`)) return
+  const handleToggle = (item) => {
+    const isCurrentlyActive = item.isActive
+    const action = isCurrentlyActive ? 'deaktive etmek' : 'aktif etmek'
+    const actionPast = isCurrentlyActive ? 'deaktive edildi' : 'aktif edildi'
+    const icon = isCurrentlyActive ? '📦' : '✅'
+    const modalType = isCurrentlyActive ? 'warning' : 'success'
     
-    try {
-      // Dictionary için dictionary API kullan
-      await deleteDictionaryItem(selectedDictionary.id, item.code)
-      showNotification('Kayıt başarıyla deaktive edildi!', 'success')
-      // Listeyi yeniden yükle
-      await loadDictionaryItems()
-    } catch (error) {
-      console.error('Error toggling item:', error)
-      showNotification(getUserFriendlyErrorMessage(error, 'İşlem başarısız'), 'error')
-    }
+    setConfirmModal({
+      title: isCurrentlyActive ? 'Kaydı Deaktive Et' : 'Kaydı Aktif Et',
+      message: `"${item.label}" kaydını ${action} istediğinizden emin misiniz?${isCurrentlyActive ? '\n\n(Tekrar aktif etmek için backend\'e erişim gerekir)' : ''}`,
+      icon: icon,
+      type: modalType,
+      confirmText: isCurrentlyActive ? 'Deaktive Et' : 'Aktif Et',
+      onConfirm: async () => {
+        try {
+          // Dictionary için dictionary API kullan
+          await deleteDictionaryItem(selectedDictionary.id, item.code)
+          showNotification(`Kayıt başarıyla ${actionPast}!`, 'success')
+          // Listeyi yeniden yükle
+          await loadDictionaryItems()
+        } catch (error) {
+          console.error('Error toggling item:', error)
+          showNotification(getUserFriendlyErrorMessage(error, 'İşlem başarısız'), 'error')
+        }
+        setConfirmModal(null)
+      }
+    })
   }
 
-  const handleHardDelete = async (item) => {
-    if (!confirm(`⚠️ DİKKAT! "${item.label}" kaydını KALICI olarak silmek istediğinizden emin misiniz?\n\n⚠️ BU İŞLEM GERİ ALINAMAZ!\n\nDictionary kayıtları zaman sınırlaması olmadan kalıcı olarak silinebilir.`)) return
-    
-    try {
-      await hardDeleteDictionaryItem(selectedDictionary.id, item.code)
-      showNotification('Kayıt kalıcı olarak silindi!', 'success')
-      // Listeyi yeniden yükle
-      await loadDictionaryItems()
-    } catch (error) {
-      console.error('Error hard deleting item:', error)
-      showNotification(getUserFriendlyErrorMessage(error, 'İşlem başarısız'), 'error')
-    }
+  const handleHardDelete = (item) => {
+    setConfirmModal({
+      title: '⚠️ Kalıcı Silme',
+      message: `"${item.label}" kaydını KALICI olarak silmek istediğinizden emin misiniz?\n\n⚠️ BU İŞLEM GERİ ALINAMAZ!\n\nDictionary kayıtları zaman sınırlaması olmadan kalıcı olarak silinebilir.`,
+      icon: '🗑️',
+      type: 'danger',
+      confirmText: 'Kalıcı Olarak Sil',
+      onConfirm: async () => {
+        try {
+          await hardDeleteDictionaryItem(selectedDictionary.id, item.code)
+          showNotification('Kayıt kalıcı olarak silindi!', 'success')
+          // Listeyi yeniden yükle
+          await loadDictionaryItems()
+        } catch (error) {
+          console.error('Error hard deleting item:', error)
+          showNotification(getUserFriendlyErrorMessage(error, 'İşlem başarısız'), 'error')
+        }
+        setConfirmModal(null)
+      }
+    })
   }
 
   const handleSubmit = async (e) => {
@@ -488,6 +511,37 @@ export default function DictionaryManagement({ selectedDictionaryId }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmModal && (
+        <div className="modal-overlay-confirm">
+          <div className={`modal-confirm modal-confirm-${confirmModal.type}`}>
+            <div className="modal-confirm-header">
+              <span className="modal-confirm-icon">{confirmModal.icon}</span>
+              <h3 className="modal-confirm-title">{confirmModal.title}</h3>
+            </div>
+            <div className="modal-confirm-body">
+              <p className="modal-confirm-message" style={{ whiteSpace: 'pre-line' }}>{confirmModal.message}</p>
+            </div>
+            <div className="modal-confirm-footer">
+              <button 
+                type="button" 
+                className="btn-confirm-cancel" 
+                onClick={() => setConfirmModal(null)}
+              >
+                İptal
+              </button>
+              <button 
+                type="button" 
+                className={`btn-confirm-action btn-confirm-${confirmModal.type}`}
+                onClick={confirmModal.onConfirm}
+              >
+                {confirmModal.confirmText}
+              </button>
+            </div>
           </div>
         </div>
       )}

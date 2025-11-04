@@ -26,8 +26,13 @@ export default function EntityManagement({
   const [totalPages, setTotalPages] = useState(0)
   const [hasNext, setHasNext] = useState(false)
   const [hasPrevious, setHasPrevious] = useState(false)
-  // Debounce
+  // Debounce and tracking refs
   const searchDebounceRef = useRef(null)
+  const isInitialLoadRef = useRef(true) // Track initial load to skip debounce
+  const isInitializedRef = useRef(false) // Track if component is initialized
+  const prevSearchKeyRef = useRef('')
+  const prevShowAllRef = useRef(false)
+  const prevSearchTermRef = useRef('')
   const [notification, setNotification] = useState(null)
   const [confirmModal, setConfirmModal] = useState(null) // { title, message, onConfirm, confirmText, type, icon }
   const [dictionaries, setDictionaries] = useState({})
@@ -50,6 +55,13 @@ export default function EntityManagement({
 
   // Initialize searchValues and formData when config changes
   useEffect(() => {
+    if (!isInitializedRef.current) {
+      // First mount - just mark as initialized, don't update state
+      isInitializedRef.current = true
+      return
+    }
+    
+    // Entity config changed (switching between entities) - reset everything
     const fields = Array.isArray(entityConfig.searchFields) ? entityConfig.searchFields : []
     const initial = fields.reduce((acc, f) => { acc[f] = ''; return acc }, {})
     setSearchValues(initial)
@@ -62,24 +74,56 @@ export default function EntityManagement({
       return acc
     }, {})
     setFormData(initialFormData)
+    
+    // Reset to initial load state when entity changes
+    isInitialLoadRef.current = true
   }, [entityConfig])
 
-  // Reset page when filters change
+  // Load items with smart debouncing (single useEffect to avoid multiple triggers)
   useEffect(() => {
-    setCurrentPage(0)
-  }, [showAll, searchTerm, JSON.stringify(searchValues)])
-
-  // Debounced load
-  useEffect(() => {
-    if (searchDebounceRef.current) {
-      clearTimeout(searchDebounceRef.current)
+    const searchKey = JSON.stringify(searchValues)
+    
+    // Check if filters changed (not pagination)
+    const filtersChanged = (
+      searchKey !== prevSearchKeyRef.current ||
+      showAll !== prevShowAllRef.current ||
+      searchTerm !== prevSearchTermRef.current
+    )
+    
+    if (filtersChanged && currentPage !== 0) {
+      // Filters changed but we're not on page 0, reset to page 0
+      // This will trigger this useEffect again with currentPage=0
+      prevSearchKeyRef.current = searchKey
+      prevShowAllRef.current = showAll
+      prevSearchTermRef.current = searchTerm
+      setCurrentPage(0)
+      return // Exit early, will be called again when currentPage updates
     }
-    searchDebounceRef.current = setTimeout(() => {
+    
+    // Update tracking refs
+    prevSearchKeyRef.current = searchKey
+    prevShowAllRef.current = showAll
+    prevSearchTermRef.current = searchTerm
+    
+    // Load items with appropriate debouncing
+    if (isInitialLoadRef.current) {
+      // Initial load - no debounce, load immediately
+      isInitialLoadRef.current = false
       loadItems()
-    }, 600)
+    } else {
+      // Subsequent loads - debounce to avoid excessive API calls
+      if (searchDebounceRef.current) {
+        clearTimeout(searchDebounceRef.current)
+      }
+      searchDebounceRef.current = setTimeout(() => {
+        loadItems()
+      }, 600)
+    }
+
     return () => {
       if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showAll, searchTerm, JSON.stringify(searchValues), currentPage, pageSize])
 
   // Load dictionaries when entityConfig changes

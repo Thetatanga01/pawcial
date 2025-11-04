@@ -7,6 +7,7 @@ export default function Adopt() {
   const [pet, setPet] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [notification, setNotification] = useState(null)
 
   useEffect(() => {
     let mounted = true
@@ -52,7 +53,11 @@ export default function Adopt() {
         <div className="split-grid" style={{ gap: '24px', alignItems: 'flex-start' }}>
           <div className="split-content">
             <div className="event-details-card">
-            <form className="form-grid" onSubmit={(e) => { e.preventDefault(); alert('Başvurunuz alındı!'); }}>
+            <form className="form-grid" onSubmit={(e) => { 
+              e.preventDefault(); 
+              setNotification({ message: 'Başvurunuz alındı!', type: 'success' });
+              setTimeout(() => setNotification(null), 6000);
+            }}>
               <div className="form-field">
                 <label htmlFor="fullName">Ad Soyad</label>
                 <input id="fullName" type="text" required className="search-input" />
@@ -96,6 +101,18 @@ export default function Adopt() {
           </div>
         </div>
       </div>
+
+      {/* Notification */}
+      {notification && (
+        <div className={`notification notification-${notification.type}`}>
+          <div className="notification-content">
+            <span className="notification-icon">
+              {notification.type === 'success' ? '✓' : '✕'}
+            </span>
+            <span className="notification-message">{notification.message}</span>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
