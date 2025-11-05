@@ -1,0 +1,88 @@
+stages:
+  - build
+  - docker
+  - deploy
+
+variables:
+  DOCKER_IMAGE: $CI_REGISTRY_IMAGE
+  DEPLOY_HOST: 192.168.0.72
+  DEPLOY_USER: mustafa
+  DEPLOY_DIR: /home/mustafa/pawcial-frontend
+  NODE_VERSION: "20"
+
+cache:
+  key: npm-cache
+  paths:
+    - node_modules/
+    - .npm/
+
+# Build aşaması - dependencies ve dist oluştur
+build:
+  stage: build
+  image: node:${NODE_VERSION}-alpine
+  tags:
+    - docker
+  script:
+    - npm ci --cache .npm --prefer-offline
+    - npm run build
+  artifacts:
+    paths:
+      - dist/
+    expire_in: 1 hour
+  only:
+    - master
+
+# Docker image oluştur
+docker-build:
+  stage: docker
+  image: docker:24
+  tags:
+    - docker
+  variables:
+    DOCKER_HOST: unix:///var/run/docker.sock
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin http://192.168.0.79:5050
+  script:
+    - docker build -f Dockerfile -t $DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA -t $DOCKER_IMAGE:latest .
+    - docker push $DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA
+    - docker push $DOCKER_IMAGE:latest
+  timeout: 15m
+  only:
+    - master
+  needs:
+    - build
+
+# Production'a deploy et
+deploy:
+  stage: deploy
+  image: alpine:latest
+  tags:
+    - docker
+  before_script:
+    - apk add --no-cache openssh-client
+    - echo "$SSH_PRIVATE_KEY_B64" | base64 -d | tr -d '\r' > /tmp/ssh_key
+    - chmod 600 /tmp/ssh_key
+    - mkdir -p /root/.ssh
+    - ssh-keyscan -t ed25519 192.168.0.72 >> /root/.ssh/known_hosts || true
+  script:
+    # 1. docker-compose.yml dosyasını kopyala
+    - scp -o IdentitiesOnly=yes -i /tmp/ssh_key docker-compose.yml $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_DIR/docker-compose.yml
+    
+    # 2. nginx.conf dosyasını kopyala (eğer varsa)
+    - scp -o IdentitiesOnly=yes -i /tmp/ssh_key nginx.conf $DEPLOY_USER@$DEPLOY_HOST:$DEPLOY_DIR/nginx.conf || true
+    
+    # 3. Uzak makinede docker login + compose işlemleri
+    - ssh -o IdentitiesOnly=yes -i /tmp/ssh_key $DEPLOY_USER@$DEPLOY_HOST "
+      export CI_REGISTRY_USER='$CI_REGISTRY_USER';
+      export CI_REGISTRY_PASSWORD='$CI_REGISTRY_PASSWORD';
+      echo \$CI_REGISTRY_PASSWORD | docker login -u \$CI_REGISTRY_USER --password-stdin http://192.168.0.79:5050 &&
+      cd $DEPLOY_DIR &&
+      docker compose pull &&
+      docker compose up -d --force-recreate
+      "
+  only:
+    - master
+  when: on_success
+  needs:
+    - docker-build
+
