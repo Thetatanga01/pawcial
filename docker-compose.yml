@@ -22,5 +22,5 @@ services:
 
 networks:
   pawcial-network:
-    driver: bridge
+    driver: bridge 
 
