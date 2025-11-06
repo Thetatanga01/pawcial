@@ -2,6 +2,9 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { getDictionaryItems } from '../api/dictionary.js'
 import { getUserFriendlyErrorMessage, NOTIFICATION_DURATION, ERROR_NOTIFICATION_DURATION } from '../utils/errorHandler.js'
 import { isHardDeleteAllowed, getHardDeleteRemainingSeconds, formatRemainingTime, fetchHardDeleteWindowSeconds } from '../utils/hardDeleteHelper.js'
+import { getApiBaseUrl } from '../config/apiConfig.js'
+
+const API_BASE_URL = getApiBaseUrl()
 
 /**
  * Generic Entity Management Component
@@ -208,7 +211,7 @@ export default function EntityManagement({
             } else if (field.entityEndpoint) {
               // Load from entity API
               // Dropdown için tüm kayıtları çek (size=1000 ile pagination'ı aş)
-              const url = `http://localhost:8000/api/${field.entityEndpoint}?all=true&size=1000`
+              const url = `${API_BASE_URL}/${field.entityEndpoint}?all=true&size=1000`
               console.log(`Loading entity from: ${url}`)
               const response = await fetch(url)
               console.log(`Entity response status: ${response.status}`)

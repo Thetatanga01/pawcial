@@ -1,6 +1,7 @@
 // Dictionary API helper functions
 // Backend endpoint base URL
-const API_BASE_URL = 'http://localhost:8000/api'
+import { getApiBaseUrl } from '../config/apiConfig'
+const API_BASE_URL = getApiBaseUrl()
 
 // Dictionary endpoint mapping (plural forms)
 const DICTIONARY_ENDPOINTS = {

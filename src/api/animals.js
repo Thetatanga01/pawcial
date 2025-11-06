@@ -1,5 +1,6 @@
 // API Base URL
-const API_BASE_URL = 'http://localhost:8000/api';
+import { getApiBaseUrl } from '../config/apiConfig';
+const API_BASE_URL = getApiBaseUrl();
 
 /**
  * Get all animals with optional filters and pagination

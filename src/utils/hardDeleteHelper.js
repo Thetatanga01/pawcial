@@ -68,9 +68,12 @@ export function formatRemainingTime(seconds) {
  * Fetches system parameter for hard delete window
  * @returns {Promise<number>} Hard delete window in seconds, defaults to 300
  */
+import { getApiBaseUrl } from '../config/apiConfig';
+
 export async function fetchHardDeleteWindowSeconds() {
   try {
-    const response = await fetch('http://localhost:8000/api/system-parameters')
+    const API_BASE_URL = getApiBaseUrl();
+    const response = await fetch(`${API_BASE_URL}/system-parameters`)
     if (!response.ok) {
       console.error('Failed to fetch system parameters')
       return 300 // Default fallback

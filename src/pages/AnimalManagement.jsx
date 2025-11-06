@@ -4,6 +4,9 @@ import { getDictionaryItems } from '../api/dictionary.js'
 import { createApiHelpers } from '../api/genericApi.js'
 import { getUserFriendlyErrorMessage, NOTIFICATION_DURATION, ERROR_NOTIFICATION_DURATION } from '../utils/errorHandler.js'
 import { isHardDeleteAllowed, getHardDeleteRemainingSeconds, formatRemainingTime, fetchHardDeleteWindowSeconds } from '../utils/hardDeleteHelper.js'
+import { getApiBaseUrl } from '../config/apiConfig.js'
+
+const API_BASE_URL = getApiBaseUrl()
 
 const animalEventApi = createApiHelpers('animal-events')
 const personsApi = createApiHelpers('persons')
@@ -244,7 +247,7 @@ export default function AnimalManagement() {
       const loadSpecies = async () => {
         try {
           // Dropdown için tüm türleri çek (size=1000 ile pagination'ı aş)
-          const response = await fetch('http://localhost:8000/api/species?size=1000')
+          const response = await fetch(`${API_BASE_URL}/species?size=1000`)
           if (response.ok) {
             const data = await response.json()
             const entities = data.content || data // Backend paginated response: { content: [...] }
@@ -265,7 +268,7 @@ export default function AnimalManagement() {
       const loadBreeds = async () => {
         try {
           // Dropdown için tüm ırkları çek (size=1000 ile pagination'ı aş)
-          const response = await fetch('http://localhost:8000/api/breeds?size=1000')
+          const response = await fetch(`${API_BASE_URL}/breeds?size=1000`)
           if (response.ok) {
             const data = await response.json()
             const entities = data.content || data // Backend paginated response: { content: [...] }
@@ -473,7 +476,7 @@ export default function AnimalManagement() {
     setEventsLoading(true)
     try {
       const response = await fetch(
-        `http://localhost:8000/api/animal-events/animal/${animalId}?page=${eventsPage}&size=${eventsPageSize}&all=${showAllEvents}`
+        `${API_BASE_URL}/animal-events/animal/${animalId}?page=${eventsPage}&size=${eventsPageSize}&all=${showAllEvents}`
       )
       
       if (response.ok) {
@@ -514,15 +517,15 @@ export default function AnimalManagement() {
         volunteersRaw
       ] = await Promise.all([
         // EventType entity'den çek (dictionary değil!)
-        fetch('http://localhost:8000/api/event-types?size=1000')
+        fetch(`${API_BASE_URL}/event-types?size=1000`)
           .then(res => res.json())
           .then(data => (data.content || data))
           .catch(() => []),
-        fetch('http://localhost:8000/api/facilities?size=1000')
+        fetch(`${API_BASE_URL}/facilities?size=1000`)
           .then(res => res.json())
           .then(data => (data.content || data))
           .catch(() => []),
-        fetch('http://localhost:8000/api/facility-units?size=1000')
+        fetch(`${API_BASE_URL}/facility-units?size=1000`)
           .then(res => res.json())
           .then(data => (data.content || data))
           .catch(() => []),
@@ -532,7 +535,7 @@ export default function AnimalManagement() {
         getDictionaryItems('med-event-type').catch(() => []),
         getDictionaryItems('vaccine').catch(() => []),
         getDictionaryItems('dose-route').catch(() => []),
-        fetch('http://localhost:8000/api/volunteers?size=1000')
+        fetch(`${API_BASE_URL}/volunteers?size=1000`)
           .then(res => res.json())
           .then(data => (data.content || data))
           .catch(() => [])
