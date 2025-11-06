@@ -4,8 +4,7 @@ stages:
   - deploy
 
 variables:
-  DOCKER_IMAGE: $CI_REGISTRY_IMAGE  # GitLab'ın otomatik registry path'ini kullan
-  DOCKER_TAG_PREFIX: "frontend"  # Frontend için özel tag prefix
+  DOCKER_IMAGE: $CI_REGISTRY_IMAGE  # GitLab otomatik: 192.168.0.79:5050/mustafaguven/pawcial-frontend
   DEPLOY_HOST: 192.168.0.72
   DEPLOY_USER: mustafa
   DEPLOY_DIR: /home/mustafa/pawcial-frontend
@@ -48,11 +47,11 @@ docker-build:
     - echo "Login successful!"
   script:
     - echo "Building Docker image..."
-    - docker build -f Dockerfile -t $DOCKER_IMAGE:$DOCKER_TAG_PREFIX-$CI_COMMIT_SHORT_SHA -t $DOCKER_IMAGE:$DOCKER_TAG_PREFIX-latest .
-    - echo "Pushing image with tag $DOCKER_TAG_PREFIX-$CI_COMMIT_SHORT_SHA..."
-    - docker push $DOCKER_IMAGE:$DOCKER_TAG_PREFIX-$CI_COMMIT_SHORT_SHA
-    - echo "Pushing image with tag $DOCKER_TAG_PREFIX-latest..."
-    - docker push $DOCKER_IMAGE:$DOCKER_TAG_PREFIX-latest
+    - docker build -f Dockerfile -t $DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA -t $DOCKER_IMAGE:latest .
+    - echo "Pushing image with tag $CI_COMMIT_SHORT_SHA..."
+    - docker push $DOCKER_IMAGE:$CI_COMMIT_SHORT_SHA
+    - echo "Pushing image with tag latest..."
+    - docker push $DOCKER_IMAGE:latest
     - echo "Docker push completed successfully!"
   timeout: 15m
   only:
