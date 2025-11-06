@@ -4,7 +4,7 @@ stages:
   - deploy
 
 variables:
-  DOCKER_IMAGE: $CI_REGISTRY_IMAGE
+  DOCKER_IMAGE: 192.168.0.79:5050/mustafaguven/pawcial-frontend  # GitLab proje ismi 'pawcial' olsa da image ismini frontend için özelleştir
   DEPLOY_HOST: 192.168.0.72
   DEPLOY_USER: mustafa
   DEPLOY_DIR: /home/mustafa/pawcial-frontend
