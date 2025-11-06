@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   pawcial-frontend:
-    image: 192.168.0.79:5050/mustafaguven/pawcial-frontend:latest
+    image: 192.168.0.79:5050/mustafaguven/pawcial:frontend-latest
     container_name: pawcial-frontend
     environment:
       # Nginx varsayılan olarak 80 portunda çalışır
