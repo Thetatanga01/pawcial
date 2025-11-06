@@ -9,6 +9,7 @@ variables:
   DEPLOY_USER: mustafa
   DEPLOY_DIR: /home/mustafa/pawcial-frontend
   NODE_VERSION: "20"
+  FF_NETWORK_PER_BUILD: "true"  # Her build için ayrı network oluştur (network hatalarını önler)
 
 cache:
   key: npm-cache
