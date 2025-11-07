@@ -28,7 +28,7 @@ const DICTIONARY_ENDPOINTS = {
   'training-level': 'training-levels',
   'unit-type': 'unit-types',
   'vaccine': 'vaccines',
-  'volunteer-area': 'volunteer-area-dictionaries',
+  'volunteer-area': 'volunteer-areas',
   'volunteer-status': 'volunteer-statuses',
   'zone-purpose': 'zone-purposes'
 }
