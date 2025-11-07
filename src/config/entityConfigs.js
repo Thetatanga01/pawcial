@@ -176,27 +176,31 @@ export const VOLUNTEER_CONFIG = {
   labelSingle: 'Gönüllü',
   labelPlural: 'Gönüllüler',
   description: 'Gönüllü kayıtlarını yönetin',
-  searchFields: ['personFullName', 'volunteerAreaCode', 'volunteerStatusCode'],
+  searchFields: ['personFullName', 'status'],
   formLayout: 'grid',
   
   fields: [
     {
       name: 'personId',
-      label: 'Kişi ID',
-      type: 'number',
+      label: 'Kişi',
+      type: 'searchable-entity',
+      entityEndpoint: 'persons',
+      searchParam: 'fullName',
+      displayField: 'fullName',
       required: true,
-      placeholder: 'Kişi ID giriniz',
-      hint: 'Önce kişi kaydı oluşturulmalı'
+      placeholder: 'Kişi adı ile ara... (min 2 karakter)',
+      hint: 'Kişi adını yazarak arayın'
     },
     {
-      name: 'volunteerAreaCode',
-      label: 'Gönüllü Alanı',
-      type: 'select',
+      name: 'areaCodes',
+      label: 'Gönüllü Alanları',
+      type: 'multiselect',
       dictionary: 'volunteer-area',
-      required: true
+      required: true,
+      hint: 'Birden fazla alan seçilebilir'
     },
     {
-      name: 'volunteerStatusCode',
+      name: 'status',
       label: 'Gönüllü Durumu',
       type: 'select',
       dictionary: 'volunteer-status',
@@ -219,13 +223,25 @@ export const VOLUNTEER_CONFIG = {
   ],
 
   tableColumns: [
-    { field: 'personId', label: 'Kişi ID', width: '15%' },
-    { field: 'volunteerAreaCode', label: 'Alan', width: '25%', render: renderDictionaryLabel('volunteerAreaCode') },
-    { field: 'volunteerStatusCode', label: 'Durum', width: '20%', render: renderDictionaryLabel('volunteerStatusCode') },
-    { field: 'startDate', label: 'Başlangıç', width: '20%' }
+    { field: 'personName', label: 'Kişi', width: '25%', render: (value, item) => value || item.personFullName || '-' },
+    { 
+      field: 'areas', 
+      label: 'Alanlar', 
+      width: '30%', 
+      render: (areas, item, dictionaries) => {
+        if (!areas || areas.length === 0) return '-'
+        const areaDict = dictionaries?.['areaCodes'] || []
+        return areas.map(areaCode => {
+          const area = areaDict.find(d => d.code === areaCode)
+          return area ? area.label : areaCode
+        }).join(', ')
+      }
+    },
+    { field: 'status', label: 'Durum', width: '20%', render: renderDictionaryLabel('status') },
+    { field: 'startDate', label: 'Başlangıç', width: '15%' }
   ],
 
-  getDisplayName: (item) => `Gönüllü #${item.id}`
+  getDisplayName: (item) => item.personName || item.personFullName || `Gönüllü #${item.id}`
 };
 
 export const FACILITY_CONFIG = {

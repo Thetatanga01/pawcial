@@ -4,8 +4,6 @@ import { getUserFriendlyErrorMessage, NOTIFICATION_DURATION, ERROR_NOTIFICATION_
 import { isHardDeleteAllowed, getHardDeleteRemainingSeconds, formatRemainingTime, fetchHardDeleteWindowSeconds } from '../utils/hardDeleteHelper.js'
 import { getApiBaseUrl } from '../config/apiConfig.js'
 
-const API_BASE_URL = getApiBaseUrl()
-
 /**
  * Generic Entity Management Component
  * Dinamik olarak farklı entity'ler için kullanılabilir
@@ -40,6 +38,10 @@ export default function EntityManagement({
   const [confirmModal, setConfirmModal] = useState(null) // { title, message, onConfirm, confirmText, type, icon }
   const [dictionaries, setDictionaries] = useState({})
   const [hardDeleteWindowSeconds, setHardDeleteWindowSeconds] = useState(300) // System parameter for hard delete
+  
+  // Searchable entity states (for fields with type: 'searchable-entity')
+  const [entitySearchStates, setEntitySearchStates] = useState({}) // { fieldName: { term, results, loading, selectedLabel } }
+  const entitySearchDebounceRefs = useRef({}) // { fieldName: timeoutId }
 
   // Form data
   const [formData, setFormData] = useState(
@@ -272,7 +274,23 @@ export default function EntityManagement({
       // Özel mapping: organizationCode için organization.code kullan
       if (field.name === 'organizationCode' && item.organization) {
         acc[field.name] = item.organization.code || ''
-      } else {
+      }
+      // Özel mapping: areaCodes için areas array'ini kullan
+      else if (field.name === 'areaCodes' && item.areas) {
+        acc[field.name] = Array.isArray(item.areas) ? item.areas : []
+      }
+      // Searchable entity fields için selectedLabel'ı set et
+      else if (field.type === 'searchable-entity' && item[field.name]) {
+        acc[field.name] = item[field.name]
+        // Set the display label for searchable fields
+        const displayField = field.displayField || 'name'
+        const labelValue = item[displayField.replace('Id', 'Name')] || item[displayField] || ''
+        setEntitySearchStates(prev => ({
+          ...prev,
+          [field.name]: { term: labelValue, selectedLabel: labelValue, results: [], loading: false }
+        }))
+      }
+      else {
         acc[field.name] = item[field.name] || ''
       }
       return acc
@@ -377,6 +395,50 @@ export default function EntityManagement({
   // Server-side filtering aktif, items doğrudan kullanılacak
   const filteredItems = items
 
+  // Searchable entity search function
+  const searchEntity = async (fieldName, fieldConfig, term) => {
+    if (!term || term.trim().length < 2) {
+      setEntitySearchStates(prev => ({
+        ...prev,
+        [fieldName]: { ...prev[fieldName], results: [], loading: false }
+      }))
+      return
+    }
+    
+    setEntitySearchStates(prev => ({
+      ...prev,
+      [fieldName]: { ...prev[fieldName], loading: true }
+    }))
+    
+    try {
+      const API_BASE_URL = getApiBaseUrl()
+      const searchParam = fieldConfig.searchParam || 'name'
+      const url = `${API_BASE_URL}/${fieldConfig.entityEndpoint}/search?${searchParam}=${encodeURIComponent(term)}&page=0&size=10`
+      
+      const response = await fetch(url)
+      if (!response.ok) throw new Error('Search failed')
+      
+      const data = await response.json()
+      const items = (data.content || data || [])
+        .filter(item => item.isActive !== false)
+        .map(item => ({
+          id: item.id || item.code,
+          label: item[fieldConfig.displayField] || item.name || item.label
+        }))
+      
+      setEntitySearchStates(prev => ({
+        ...prev,
+        [fieldName]: { ...prev[fieldName], results: items, loading: false }
+      }))
+    } catch (err) {
+      console.error(`Error searching ${fieldConfig.entityEndpoint}:`, err)
+      setEntitySearchStates(prev => ({
+        ...prev,
+        [fieldName]: { ...prev[fieldName], results: [], loading: false }
+      }))
+    }
+  }
+
   const renderField = (field) => {
     const value = formData[field.name] || ''
 
@@ -466,6 +528,54 @@ export default function EntityManagement({
         }
         break
 
+      case 'multiselect':
+        // Multi-select for arrays (e.g., multiple volunteer areas)
+        const multiselectOptions = dictionaries[field.name] || []
+        const selectedValues = Array.isArray(value) ? value : (value ? [value] : [])
+        
+        return (
+          <div>
+            <div style={{ 
+              border: '1px solid #ddd', 
+              borderRadius: '4px', 
+              padding: '8px',
+              maxHeight: '150px',
+              overflowY: 'auto',
+              background: '#fafafa'
+            }}>
+              {multiselectOptions.map((opt) => (
+                <label 
+                  key={opt.code} 
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    padding: '4px 0',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedValues.includes(opt.code)}
+                    onChange={(e) => {
+                      const newValues = e.target.checked
+                        ? [...selectedValues, opt.code]
+                        : selectedValues.filter(v => v !== opt.code)
+                      setFormData({ ...formData, [field.name]: newValues })
+                    }}
+                    style={{ marginRight: '8px' }}
+                  />
+                  <span>{opt.label}</span>
+                </label>
+              ))}
+            </div>
+            {selectedValues.length > 0 && (
+              <small className="form-hint" style={{ color: '#10b981', marginTop: '4px' }}>
+                {selectedValues.length} alan seçildi
+              </small>
+            )}
+          </div>
+        )
+
       case 'checkbox':
         return (
           <input
@@ -475,6 +585,141 @@ export default function EntityManagement({
             onChange={(e) => setFormData({ ...formData, [field.name]: e.target.checked })}
             className="form-checkbox"
           />
+        )
+
+      case 'searchable-entity':
+        // Initialize search state for this field with safe defaults
+        const searchState = entitySearchStates[field.name] || {}
+        const searchTerm = searchState.term || ''
+        const searchResults = searchState.results || []
+        const isSearching = searchState.loading || false
+        const selectedLabel = searchState.selectedLabel || ''
+        const hasValue = !!formData[field.name]
+        
+        // Handle search term change with debounce
+        const handleSearchChange = (newTerm) => {
+          setEntitySearchStates(prev => ({
+            ...prev,
+            [field.name]: { ...(prev[field.name] || {}), term: newTerm }
+          }))
+          
+          // Clear selected value if search term changes
+          if (newTerm !== selectedLabel) {
+            setFormData({ ...formData, [field.name]: '' })
+          }
+          
+          // Debounce search
+          if (entitySearchDebounceRefs.current[field.name]) {
+            clearTimeout(entitySearchDebounceRefs.current[field.name])
+          }
+          
+          entitySearchDebounceRefs.current[field.name] = setTimeout(() => {
+            searchEntity(field.name, field, newTerm)
+          }, 400)
+        }
+        
+        // Handle item selection
+        const handleSelect = (item) => {
+          setFormData({ ...formData, [field.name]: item.id })
+          setEntitySearchStates(prev => ({
+            ...prev,
+            [field.name]: { ...(prev[field.name] || {}), term: item.label, selectedLabel: item.label, results: [] }
+          }))
+        }
+        
+        return (
+          <div style={{ position: 'relative' }}>
+            <input
+              type="text"
+              id={field.name}
+              value={searchTerm}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              placeholder={field.placeholder || 'Ara...'}
+              className="form-input-dict"
+              required={field.required}
+              autoComplete="off"
+            />
+            {isSearching && (
+              <div style={{ 
+                position: 'absolute', 
+                right: '10px', 
+                top: '50%', 
+                transform: 'translateY(-50%)',
+                fontSize: '12px',
+                color: '#999'
+              }}>
+                ⏳ Aranıyor...
+              </div>
+            )}
+            {searchTerm.length > 0 && searchTerm.length < 2 && (
+              <small className="form-hint" style={{ color: '#f59e0b' }}>
+                En az 2 karakter girin
+              </small>
+            )}
+            {!hasValue && searchTerm.length >= 2 && searchResults.length > 0 && (
+              <div style={{ 
+                position: 'absolute', 
+                zIndex: 1000, 
+                background: '#fff', 
+                border: '1px solid #ddd',
+                borderRadius: '4px',
+                boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+                width: '100%',
+                maxHeight: '200px',
+                overflowY: 'auto',
+                marginTop: '4px'
+              }}>
+                {searchResults.map((item) => (
+                  <div
+                    key={item.id}
+                    style={{ 
+                      padding: '10px 12px', 
+                      cursor: 'pointer',
+                      borderBottom: '1px solid #f0f0f0',
+                      transition: 'background 0.2s'
+                    }}
+                    onMouseEnter={(e) => e.target.style.background = '#f0f9ff'}
+                    onMouseLeave={(e) => e.target.style.background = '#fff'}
+                    onClick={() => handleSelect(item)}
+                  >
+                    <div style={{ fontWeight: '500' }}>{item.label}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {!hasValue && searchTerm.length >= 2 && searchResults.length === 0 && !isSearching && (
+              <small className="form-hint" style={{ color: '#ef4444' }}>
+                Sonuç bulunamadı
+              </small>
+            )}
+            {hasValue && (
+              <small className="form-hint" style={{ color: '#10b981' }}>
+                ✓ Seçildi - {selectedLabel || searchTerm}
+                {' '}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFormData({ ...formData, [field.name]: '' })
+                    setEntitySearchStates(prev => ({
+                      ...prev,
+                      [field.name]: { term: '', results: [], loading: false, selectedLabel: '' }
+                    }))
+                  }}
+                  style={{
+                    fontSize: '11px',
+                    padding: '2px 6px',
+                    background: '#fee2e2',
+                    color: '#ef4444',
+                    border: '1px solid #fecaca',
+                    borderRadius: '3px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Değiştir
+                </button>
+              </small>
+            )}
+          </div>
         )
 
       default:
