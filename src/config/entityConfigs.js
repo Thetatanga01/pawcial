@@ -230,7 +230,9 @@ export const VOLUNTEER_CONFIG = {
       width: '30%', 
       render: (areas, item, dictionaries) => {
         if (!areas || areas.length === 0) return '-'
-        const areaDict = dictionaries?.['areaCodes'] || []
+        // Dictionary key field'ın name'i ile aynı olmalı (areaCodes)
+        // Ama dictionaries'de 'areaCodes' veya 'volunteer-area' olabilir
+        const areaDict = dictionaries?.['areaCodes'] || dictionaries?.['volunteer-area'] || []
         return areas.map(areaCode => {
           const area = areaDict.find(d => d.code === areaCode)
           return area ? area.label : areaCode

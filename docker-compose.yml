@@ -22,5 +22,6 @@ services:
 
 networks:
   pawcial-network:
-    driver: bridge 
+    name: pawcial-shared-network
+    external: true 
 

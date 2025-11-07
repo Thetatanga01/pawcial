@@ -197,8 +197,8 @@ export default function EntityManagement({
 
   const loadDictionaries = async () => {
     try {
-      const selectFields = entityConfig.fields.filter(f => f.type === 'select')
-      console.log('Loading select fields:', selectFields)
+      const selectFields = entityConfig.fields.filter(f => f.type === 'select' || f.type === 'multiselect')
+      console.log('Loading select/multiselect fields:', selectFields)
       
       const fieldData = await Promise.all(
         selectFields.map(async (field) => {
@@ -283,8 +283,10 @@ export default function EntityManagement({
       else if (field.type === 'searchable-entity' && item[field.name]) {
         acc[field.name] = item[field.name]
         // Set the display label for searchable fields
-        const displayField = field.displayField || 'name'
-        const labelValue = item[displayField.replace('Id', 'Name')] || item[displayField] || ''
+        // Backend'de personId -> personName, facilityId -> facilityName gibi pattern var
+        const nameField = field.name.replace('Id', 'Name')
+        const labelValue = item[nameField] || item[field.displayField] || ''
+        console.log(`Searchable field ${field.name}: nameField=${nameField}, labelValue=${labelValue}`)
         setEntitySearchStates(prev => ({
           ...prev,
           [field.name]: { term: labelValue, selectedLabel: labelValue, results: [], loading: false }
