@@ -92,10 +92,8 @@ export async function createDictionaryItem(dictionaryId, data) {
   }
 
   try {
-    // Proficiency-level için label yerine name kullan
-    const requestData = dictionaryId === 'proficiency-level' 
-      ? { ...data, name: data.label }
-      : data
+    // Tüm dictionary'ler için aynı format kullan (label field'ı)
+    const requestData = data
     
     const url = `${API_BASE_URL}/${endpoint}`
     console.log('Creating dictionary item:', { dictionaryId, endpoint, data: requestData, url })
@@ -243,10 +241,8 @@ export async function updateDictionaryItem(dictionaryId, code, data) {
   }
 
   try {
-    // Proficiency-level için label yerine name kullan
-    const requestData = dictionaryId === 'proficiency-level'
-      ? { name: data.label }
-      : { label: data.label }
+    // Tüm dictionary'ler için aynı format kullan (label field'ı)
+    const requestData = { label: data.label }
     
     const url = `${API_BASE_URL}/${endpoint}/${code}`
     console.log('Updating dictionary item:', { 
