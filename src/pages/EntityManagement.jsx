@@ -218,12 +218,20 @@ export default function EntityManagement({
         selectFields.map(async (field) => {
           try {
             let data = []
+            let proficiencyData = []
             
             if (field.dictionary) {
               // Load from dictionary API
               console.log(`Loading dictionary: ${field.dictionary}`)
               data = await getDictionaryItems(field.dictionary)
               console.log(`Loaded ${data.length} items from dictionary ${field.dictionary}`)
+              
+              // Eğer proficiencyDictionary varsa onu da yükle
+              if (field.proficiencyDictionary) {
+                console.log(`Loading proficiency dictionary: ${field.proficiencyDictionary}`)
+                proficiencyData = await getDictionaryItems(field.proficiencyDictionary)
+                console.log(`Loaded ${proficiencyData.length} items from proficiency dictionary`)
+              }
             } else if (field.entityEndpoint) {
               // Load from entity API
               // Dropdown için tüm kayıtları çek (size=1000 ile pagination'ı aş)
@@ -252,17 +260,29 @@ export default function EntityManagement({
               }
             }
             
-            return { key: field.name, data }
+            return { 
+              key: field.name, 
+              data,
+              proficiencyKey: field.proficiencyDictionary ? `${field.name}_proficiency` : null,
+              proficiencyData
+            }
           } catch (error) {
             console.error(`Error loading field ${field.name}:`, error)
-            return { key: field.name, data: [] }
+            return { key: field.name, data: [], proficiencyKey: null, proficiencyData: [] }
           }
         })
       )
 
-      const dictionariesObj = fieldData.reduce((acc, { key, data }) => {
+      const dictionariesObj = fieldData.reduce((acc, { key, data, proficiencyKey, proficiencyData }) => {
         acc[key] = data
         console.log(`📚 Dictionary loaded for "${key}": ${data.length} items`)
+        
+        // Eğer proficiency dictionary varsa onu da ekle
+        if (proficiencyKey && proficiencyData.length > 0) {
+          acc[proficiencyKey] = proficiencyData
+          console.log(`⭐ Proficiency dictionary loaded for "${proficiencyKey}": ${proficiencyData.length} items`)
+        }
+        
         return acc
       }, {})
 
@@ -576,13 +596,11 @@ export default function EntityManagement({
         
         return (
           <div>
-            <div style={{ 
-              border: '1px solid #ddd', 
+            <div className="multiselect-dropdown-container" style={{ 
               borderRadius: '4px', 
               padding: '8px',
               maxHeight: '150px',
-              overflowY: 'auto',
-              background: '#fafafa'
+              overflowY: 'auto'
             }}>
               {multiselectOptions.map((opt) => (
                 <label 
@@ -698,11 +716,9 @@ export default function EntityManagement({
               </small>
             )}
             {!hasValue && searchTerm.length >= 2 && searchResults.length > 0 && (
-              <div style={{ 
+              <div className="searchable-dropdown" style={{ 
                 position: 'absolute', 
                 zIndex: 1000, 
-                background: '#fff', 
-                border: '1px solid #ddd',
                 borderRadius: '4px',
                 boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
                 width: '100%',
@@ -713,14 +729,12 @@ export default function EntityManagement({
                 {searchResults.map((item) => (
                   <div
                     key={item.id}
+                    className="searchable-dropdown-item"
                     style={{ 
                       padding: '10px 12px', 
                       cursor: 'pointer',
-                      borderBottom: '1px solid #f0f0f0',
                       transition: 'background 0.2s'
                     }}
-                    onMouseEnter={(e) => e.target.style.background = '#f0f9ff'}
-                    onMouseLeave={(e) => e.target.style.background = '#fff'}
                     onClick={() => handleSelect(item)}
                   >
                     <div style={{ fontWeight: '500' }}>{item.label}</div>
@@ -768,20 +782,27 @@ export default function EntityManagement({
         const areas = Array.isArray(value) ? value : []
         const areaOptions = dictionaries[field.name] || []
         
+        // Proficiency levels dictionary'den çek
+        const proficiencyKey = `${field.name}_proficiency`
+        const proficiencyDict = dictionaries[proficiencyKey] || []
+        const proficiencyLevels = [
+          { value: '', label: 'Seviye Seçiniz' },
+          ...proficiencyDict
+            .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+            .map(p => ({
+              value: p.code,
+              label: p.name || p.label
+            }))
+        ]
+        
         console.log('🔍 Volunteer Areas Render:', {
           fieldName: field.name,
           dictionaryKey: field.dictionary,
+          proficiencyKey: proficiencyKey,
           availableKeys: Object.keys(dictionaries),
           areaOptionsCount: areaOptions.length,
-          areaOptions: areaOptions
+          proficiencyOptionsCount: proficiencyLevels.length - 1
         })
-        
-        const proficiencyLevels = [
-          { value: '', label: 'Seviye Seçiniz' },
-          { value: 'BEGINNER', label: '📚 Başlangıç' },
-          { value: 'INTERMEDIATE', label: '⚡ Orta' },
-          { value: 'EXPERT', label: '⭐ Uzman' }
-        ]
         
         const addArea = () => {
           const newAreas = [...areas, { areaCode: '', proficiencyLevel: null, notes: null }]
@@ -803,24 +824,21 @@ export default function EntityManagement({
           <div style={{ width: '100%' }}>
             {areas.map((area, index) => (
               <div 
-                key={index} 
-                style={{ 
-                  border: '1px solid #e0e0e0', 
-                  borderRadius: '6px', 
-                  padding: '12px',
-                  marginBottom: '12px',
-                  background: '#fafafa'
-                }}
-              >
+              key={index}
+              className="volunteer-area-item"
+              style={{ 
+                borderRadius: '6px', 
+                padding: '12px',
+                marginBottom: '12px'
+              }}
+            >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <strong style={{ fontSize: '14px', color: '#666' }}>Alan #{index + 1}</strong>
+                  <strong className="area-item-title" style={{ fontSize: '14px' }}>Alan #{index + 1}</strong>
                   <button
                     type="button"
                     onClick={() => removeArea(index)}
+                    className="btn-remove-area"
                     style={{
-                      background: '#fee2e2',
-                      color: '#dc2626',
-                      border: '1px solid #fecaca',
                       borderRadius: '4px',
                       padding: '4px 8px',
                       cursor: 'pointer',
@@ -834,7 +852,7 @@ export default function EntityManagement({
                 
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '8px', marginBottom: '8px' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', color: '#666' }}>
+                    <label className="area-field-label" style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
                       Gönüllü Alanı *
                     </label>
                     <select
@@ -854,7 +872,7 @@ export default function EntityManagement({
                   </div>
                   
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', color: '#666' }}>
+                    <label className="area-field-label" style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
                       Uzmanlık Seviyesi
                     </label>
                     <select
@@ -873,7 +891,7 @@ export default function EntityManagement({
                 </div>
                 
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', color: '#666' }}>
+                  <label className="area-field-label" style={{ display: 'block', fontSize: '12px', marginBottom: '4px' }}>
                     Alan Notu
                   </label>
                   <input
@@ -888,23 +906,21 @@ export default function EntityManagement({
               </div>
             ))}
             
-            <button
-              type="button"
-              onClick={addArea}
-              style={{
-                background: '#10b981',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '10px 16px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '500',
-                width: '100%'
-              }}
-            >
-              + Yeni Alan Ekle
-            </button>
+          <button
+            type="button"
+            onClick={addArea}
+            className="btn-add-area"
+            style={{
+              borderRadius: '6px',
+              padding: '10px 16px',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: '500',
+              width: '100%'
+            }}
+          >
+            + Yeni Alan Ekle
+          </button>
             
             {areas.length === 0 && field.required && (
               <small className="form-hint" style={{ color: '#ef4444', marginTop: '8px', display: 'block' }}>

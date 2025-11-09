@@ -29,6 +29,7 @@ const DICTIONARIES = [
   { id: 'outcome-type', name: 'OutcomeType', label: 'Sonuç Tipi', icon: '🎯', type: 'dictionary' },
   { id: 'placement-status', name: 'PlacementStatus', label: 'Yerleştirme Durumu', icon: '📍', type: 'dictionary' },
   { id: 'placement-type', name: 'PlacementType', label: 'Yerleştirme Tipi', icon: '🏡', type: 'dictionary' },
+  { id: 'proficiency-level', name: 'ProficiencyLevel', label: 'Uzmanlık Seviyesi', icon: '⭐', type: 'dictionary' },
   { id: 'service-type', name: 'ServiceType', label: 'Hizmet Tipi', icon: '🔧', type: 'dictionary' },
   { id: 'sex', name: 'Sex', label: 'Cinsiyet', icon: '⚧️', type: 'dictionary' },
   { id: 'size', name: 'Size', label: 'Boyut', icon: '📏', type: 'dictionary' },

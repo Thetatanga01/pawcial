@@ -28,6 +28,7 @@ const DICTIONARIES = [
   { id: 'outcome-type', name: 'OutcomeType', label: 'Sonuç Tipi', icon: '🎯', supportsUpdate: true },
   { id: 'placement-status', name: 'PlacementStatus', label: 'Yerleştirme Durumu', icon: '📍', supportsUpdate: true },
   { id: 'placement-type', name: 'PlacementType', label: 'Yerleştirme Tipi', icon: '🏡', supportsUpdate: true },
+  { id: 'proficiency-level', name: 'ProficiencyLevel', label: 'Uzmanlık Seviyesi', icon: '⭐', supportsUpdate: true },
   { id: 'service-type', name: 'ServiceType', label: 'Hizmet Tipi', icon: '🔧', supportsUpdate: true },
   { id: 'sex', name: 'Sex', label: 'Cinsiyet', icon: '⚧️', supportsUpdate: true },
   { id: 'size', name: 'Size', label: 'Boyut', icon: '📏', supportsUpdate: true },
@@ -89,9 +90,11 @@ export default function DictionaryManagement({ selectedDictionaryId }) {
       console.log('Loaded dictionary items:', data, 'showAll:', showAll)
       
       // Backend'den gelen data'da id yok, code'u id olarak kullan
+      // Bazı dictionary'lerde (örn: proficiency-level) label yerine name kullanılıyor
       const itemsWithId = Array.isArray(data) ? data.map(item => ({ 
         ...item, 
-        id: item.code 
+        id: item.code,
+        label: item.label || item.name // name varsa onu label olarak kullan
       })) : []
       setItems(itemsWithId)
     } catch (error) {

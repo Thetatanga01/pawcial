@@ -30,7 +30,8 @@ const DICTIONARY_ENDPOINTS = {
   'vaccine': 'vaccines',
   'volunteer-area': 'volunteer-areas',
   'volunteer-status': 'volunteer-statuses',
-  'zone-purpose': 'zone-purposes'
+  'zone-purpose': 'zone-purposes',
+  'proficiency-level': 'proficiency-levels'
 }
 
 /**
@@ -91,15 +92,20 @@ export async function createDictionaryItem(dictionaryId, data) {
   }
 
   try {
+    // Proficiency-level için label yerine name kullan
+    const requestData = dictionaryId === 'proficiency-level' 
+      ? { ...data, name: data.label }
+      : data
+    
     const url = `${API_BASE_URL}/${endpoint}`
-    console.log('Creating dictionary item:', { dictionaryId, endpoint, data, url })
+    console.log('Creating dictionary item:', { dictionaryId, endpoint, data: requestData, url })
     
     const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(data)
+      body: JSON.stringify(requestData)
     })
     
     console.log('Create response:', {
@@ -237,12 +243,17 @@ export async function updateDictionaryItem(dictionaryId, code, data) {
   }
 
   try {
+    // Proficiency-level için label yerine name kullan
+    const requestData = dictionaryId === 'proficiency-level'
+      ? { name: data.label }
+      : { label: data.label }
+    
     const url = `${API_BASE_URL}/${endpoint}/${code}`
     console.log('Updating dictionary item:', { 
       dictionaryId, 
       endpoint, 
       code, 
-      label: data.label, 
+      requestData, 
       url 
     })
     
@@ -251,7 +262,7 @@ export async function updateDictionaryItem(dictionaryId, code, data) {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ label: data.label })
+      body: JSON.stringify(requestData)
     })
     
     console.log('Update response:', {

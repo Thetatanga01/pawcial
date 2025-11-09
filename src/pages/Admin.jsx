@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import DictionaryManagement from './DictionaryManagement.jsx'
 import AnimalManagement from './AnimalManagement.jsx'
@@ -18,6 +18,25 @@ import { createApiHelpers } from '../api/genericApi.js'
 export default function Admin() {
   const [activeSection, setActiveSection] = useState('dashboard')
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [darkMode, setDarkMode] = useState(() => {
+    // localStorage'dan dark mode tercihini al
+    const saved = localStorage.getItem('adminDarkMode')
+    return saved ? JSON.parse(saved) : false
+  })
+
+  // Dark mode değiştiğinde localStorage'a kaydet
+  useEffect(() => {
+    localStorage.setItem('adminDarkMode', JSON.stringify(darkMode))
+    if (darkMode) {
+      document.documentElement.classList.add('admin-dark-mode')
+    } else {
+      document.documentElement.classList.remove('admin-dark-mode')
+    }
+  }, [darkMode])
+
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode)
+  }
 
   const stats = [
     { label: 'Toplam Hayvan', value: '156', change: '+12', icon: '🐾' },
@@ -70,6 +89,20 @@ export default function Admin() {
             </button>
           ))}
         </nav>
+
+        {/* Dark Mode Toggle */}
+        <div className="admin-dark-mode-toggle">
+          <button 
+            className="dark-mode-btn" 
+            onClick={toggleDarkMode}
+            title={darkMode ? 'Açık moda geç' : 'Karanlık moda geç'}
+          >
+            <span className="dark-mode-icon">{darkMode ? '☀️' : '🌙'}</span>
+            <span className="dark-mode-label">
+              {darkMode ? 'Açık Mod' : 'Karanlık Mod'}
+            </span>
+          </button>
+        </div>
 
         <div className="admin-sidebar-footer">
           <div className="admin-user-info">

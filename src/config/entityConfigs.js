@@ -196,6 +196,7 @@ export const VOLUNTEER_CONFIG = {
       label: 'Gönüllü Alanları',
       type: 'volunteer-areas',
       dictionary: 'volunteer-area',
+      proficiencyDictionary: 'proficiency-level',
       required: true,
       hint: 'Gönüllü olduğu alanlar, uzmanlık seviyeleri ve notlar',
       fullWidth: true
