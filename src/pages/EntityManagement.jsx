@@ -46,7 +46,12 @@ export default function EntityManagement({
   // Form data
   const [formData, setFormData] = useState(
     entityConfig.fields.reduce((acc, field) => {
-      acc[field.name] = ''
+      // Multiselect fields ve volunteer-areas başlangıçta boş array olmalı
+      if (field.type === 'multiselect' || field.type === 'volunteer-areas') {
+        acc[field.name] = []
+      } else {
+        acc[field.name] = ''
+      }
       return acc
     }, {})
   )
@@ -75,7 +80,12 @@ export default function EntityManagement({
     
     // Reset formData based on new config
     const initialFormData = entityConfig.fields.reduce((acc, field) => {
-      acc[field.name] = ''
+      // Multiselect fields ve volunteer-areas başlangıçta boş array olmalı
+      if (field.type === 'multiselect' || field.type === 'volunteer-areas') {
+        acc[field.name] = []
+      } else {
+        acc[field.name] = ''
+      }
       return acc
     }, {})
     setFormData(initialFormData)
@@ -197,8 +207,12 @@ export default function EntityManagement({
 
   const loadDictionaries = async () => {
     try {
-      const selectFields = entityConfig.fields.filter(f => f.type === 'select' || f.type === 'multiselect')
-      console.log('Loading select/multiselect fields:', selectFields)
+      const selectFields = entityConfig.fields.filter(f => 
+        f.type === 'select' || 
+        f.type === 'multiselect' || 
+        f.type === 'volunteer-areas'
+      )
+      console.log('Loading select/multiselect/volunteer-areas fields:', selectFields)
       
       const fieldData = await Promise.all(
         selectFields.map(async (field) => {
@@ -248,10 +262,12 @@ export default function EntityManagement({
 
       const dictionariesObj = fieldData.reduce((acc, { key, data }) => {
         acc[key] = data
+        console.log(`📚 Dictionary loaded for "${key}": ${data.length} items`)
         return acc
       }, {})
 
-      console.log('Final dictionaries object:', dictionariesObj)
+      console.log('✅ Final dictionaries object:', dictionariesObj)
+      console.log('📋 Dictionary keys:', Object.keys(dictionariesObj))
       setDictionaries(dictionariesObj)
     } catch (error) {
       console.error('Error loading dictionaries:', error)
@@ -261,7 +277,12 @@ export default function EntityManagement({
   const handleCreate = () => {
     setEditingItem(null)
     const initialData = entityConfig.fields.reduce((acc, field) => {
-      acc[field.name] = ''
+      // Multiselect fields ve volunteer-areas başlangıçta boş array olmalı
+      if (field.type === 'multiselect' || field.type === 'volunteer-areas') {
+        acc[field.name] = []
+      } else {
+        acc[field.name] = ''
+      }
       return acc
     }, {})
     setFormData(initialData)
@@ -275,8 +296,8 @@ export default function EntityManagement({
       if (field.name === 'organizationCode' && item.organization) {
         acc[field.name] = item.organization.code || ''
       }
-      // Özel mapping: areaCodes için areas array'ini kullan
-      else if (field.name === 'areaCodes' && item.areas) {
+      // Özel mapping: areas object array'i olduğu gibi kullan
+      else if (field.name === 'areas' && item.areas) {
         acc[field.name] = Array.isArray(item.areas) ? item.areas : []
       }
       // Searchable entity fields için selectedLabel'ı set et
@@ -370,18 +391,36 @@ export default function EntityManagement({
 
     try {
       // Boş string değerleri null'a çevir (backend için)
+      // Ancak boş array'leri olduğu gibi bırak
       const cleanedData = Object.entries(formData).reduce((acc, [key, value]) => {
-        acc[key] = value === '' ? null : value
+        if (value === '') {
+          acc[key] = null
+        } else if (Array.isArray(value) && value.length === 0) {
+          acc[key] = [] // Boş array'i olduğu gibi gönder
+        } else {
+          acc[key] = value
+        }
         return acc
       }, {})
+
+      console.log('🔍 EntityManagement Submit:', {
+        entity: entityConfig.labelSingle,
+        isEditing: !!editingItem,
+        formData: formData,
+        cleanedData: cleanedData
+      })
 
       if (editingItem) {
         const idFieldName = entityConfig.idField || 'id'
         const itemId = editingItem[idFieldName]
-        await apiHelpers.update(itemId, cleanedData)
+        console.log('📤 Updating item:', itemId, cleanedData)
+        const result = await apiHelpers.update(itemId, cleanedData)
+        console.log('✅ Update response:', result)
         showNotification(`${entityConfig.labelSingle} başarıyla güncellendi!`, 'success')
       } else {
-        await apiHelpers.create(cleanedData)
+        console.log('📤 Creating item:', cleanedData)
+        const result = await apiHelpers.create(cleanedData)
+        console.log('✅ Create response:', result)
         showNotification(`${entityConfig.labelSingle} başarıyla eklendi!`, 'success')
       }
 
@@ -389,7 +428,7 @@ export default function EntityManagement({
       setEditingItem(null)
       loadItems()
     } catch (error) {
-      console.error('Error saving item:', error)
+      console.error('❌ Error saving item:', error)
       showNotification(getUserFriendlyErrorMessage(error, 'Kayıt işlemi başarısız'), 'error')
     }
   }
@@ -719,6 +758,162 @@ export default function EntityManagement({
                 >
                   Değiştir
                 </button>
+              </small>
+            )}
+          </div>
+        )
+
+      case 'volunteer-areas':
+        // Volunteer areas: array of { areaCode, proficiencyLevel, notes }
+        const areas = Array.isArray(value) ? value : []
+        const areaOptions = dictionaries[field.name] || []
+        
+        console.log('🔍 Volunteer Areas Render:', {
+          fieldName: field.name,
+          dictionaryKey: field.dictionary,
+          availableKeys: Object.keys(dictionaries),
+          areaOptionsCount: areaOptions.length,
+          areaOptions: areaOptions
+        })
+        
+        const proficiencyLevels = [
+          { value: '', label: 'Seviye Seçiniz' },
+          { value: 'BEGINNER', label: '📚 Başlangıç' },
+          { value: 'INTERMEDIATE', label: '⚡ Orta' },
+          { value: 'EXPERT', label: '⭐ Uzman' }
+        ]
+        
+        const addArea = () => {
+          const newAreas = [...areas, { areaCode: '', proficiencyLevel: null, notes: null }]
+          setFormData({ ...formData, [field.name]: newAreas })
+        }
+        
+        const removeArea = (index) => {
+          const newAreas = areas.filter((_, i) => i !== index)
+          setFormData({ ...formData, [field.name]: newAreas })
+        }
+        
+        const updateArea = (index, fieldKey, fieldValue) => {
+          const newAreas = [...areas]
+          newAreas[index] = { ...newAreas[index], [fieldKey]: fieldValue || null }
+          setFormData({ ...formData, [field.name]: newAreas })
+        }
+        
+        return (
+          <div style={{ width: '100%' }}>
+            {areas.map((area, index) => (
+              <div 
+                key={index} 
+                style={{ 
+                  border: '1px solid #e0e0e0', 
+                  borderRadius: '6px', 
+                  padding: '12px',
+                  marginBottom: '12px',
+                  background: '#fafafa'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <strong style={{ fontSize: '14px', color: '#666' }}>Alan #{index + 1}</strong>
+                  <button
+                    type="button"
+                    onClick={() => removeArea(index)}
+                    style={{
+                      background: '#fee2e2',
+                      color: '#dc2626',
+                      border: '1px solid #fecaca',
+                      borderRadius: '4px',
+                      padding: '4px 8px',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      fontWeight: '500'
+                    }}
+                  >
+                    ✕ Kaldır
+                  </button>
+                </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', color: '#666' }}>
+                      Gönüllü Alanı *
+                    </label>
+                    <select
+                      value={area.areaCode || ''}
+                      onChange={(e) => updateArea(index, 'areaCode', e.target.value)}
+                      required={field.required}
+                      className="form-input-dict"
+                      style={{ width: '100%' }}
+                    >
+                      <option value="">Alan Seçiniz</option>
+                      {areaOptions.map((opt) => (
+                        <option key={opt.code} value={opt.code}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', color: '#666' }}>
+                      Uzmanlık Seviyesi
+                    </label>
+                    <select
+                      value={area.proficiencyLevel || ''}
+                      onChange={(e) => updateArea(index, 'proficiencyLevel', e.target.value)}
+                      className="form-input-dict"
+                      style={{ width: '100%' }}
+                    >
+                      {proficiencyLevels.map((lvl) => (
+                        <option key={lvl.value} value={lvl.value}>
+                          {lvl.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', marginBottom: '4px', color: '#666' }}>
+                    Alan Notu
+                  </label>
+                  <input
+                    type="text"
+                    value={area.notes || ''}
+                    onChange={(e) => updateArea(index, 'notes', e.target.value)}
+                    placeholder="Örn: 5 yıl deneyim, sertifikalı eğitmen"
+                    className="form-input-dict"
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              </div>
+            ))}
+            
+            <button
+              type="button"
+              onClick={addArea}
+              style={{
+                background: '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '10px 16px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: '500',
+                width: '100%'
+              }}
+            >
+              + Yeni Alan Ekle
+            </button>
+            
+            {areas.length === 0 && field.required && (
+              <small className="form-hint" style={{ color: '#ef4444', marginTop: '8px', display: 'block' }}>
+                En az bir alan eklemeniz gerekiyor
+              </small>
+            )}
+            {areas.length > 0 && (
+              <small className="form-hint" style={{ color: '#10b981', marginTop: '8px', display: 'block' }}>
+                ✓ {areas.length} alan eklendi
               </small>
             )}
           </div>

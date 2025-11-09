@@ -176,7 +176,7 @@ export const VOLUNTEER_CONFIG = {
   labelSingle: 'Gönüllü',
   labelPlural: 'Gönüllüler',
   description: 'Gönüllü kayıtlarını yönetin',
-  searchFields: ['personFullName', 'status'],
+  searchFields: ['personName', 'status'],
   formLayout: 'grid',
   
   fields: [
@@ -192,12 +192,13 @@ export const VOLUNTEER_CONFIG = {
       hint: 'Kişi adını yazarak arayın'
     },
     {
-      name: 'areaCodes',
+      name: 'areas',
       label: 'Gönüllü Alanları',
-      type: 'multiselect',
+      type: 'volunteer-areas',
       dictionary: 'volunteer-area',
       required: true,
-      hint: 'Birden fazla alan seçilebilir'
+      hint: 'Gönüllü olduğu alanlar, uzmanlık seviyeleri ve notlar',
+      fullWidth: true
     },
     {
       name: 'status',
@@ -213,6 +214,12 @@ export const VOLUNTEER_CONFIG = {
       required: false
     },
     {
+      name: 'endDate',
+      label: 'Bitiş Tarihi',
+      type: 'date',
+      required: false
+    },
+    {
       name: 'notes',
       label: 'Notlar',
       type: 'textarea',
@@ -223,19 +230,22 @@ export const VOLUNTEER_CONFIG = {
   ],
 
   tableColumns: [
-    { field: 'personName', label: 'Kişi', width: '25%', render: (value, item) => value || item.personFullName || '-' },
+    { field: 'personName', label: 'Kişi', width: '25%' },
     { 
       field: 'areas', 
       label: 'Alanlar', 
       width: '30%', 
       render: (areas, item, dictionaries) => {
         if (!areas || areas.length === 0) return '-'
-        // Dictionary key field'ın name'i ile aynı olmalı (areaCodes)
-        // Ama dictionaries'de 'areaCodes' veya 'volunteer-area' olabilir
-        const areaDict = dictionaries?.['areaCodes'] || dictionaries?.['volunteer-area'] || []
-        return areas.map(areaCode => {
+        // Areas artık object array: [{ areaCode, proficiencyLevel, notes }]
+        const areaDict = dictionaries?.['areas'] || []
+        return areas.map(areaObj => {
+          const areaCode = areaObj.areaCode || areaObj
           const area = areaDict.find(d => d.code === areaCode)
-          return area ? area.label : areaCode
+          const areaLabel = area ? area.label : areaCode
+          const level = areaObj.proficiencyLevel
+          const levelBadge = level ? ` (${level === 'EXPERT' ? '⭐' : level === 'INTERMEDIATE' ? '⚡' : '📚'})` : ''
+          return areaLabel + levelBadge
         }).join(', ')
       }
     },
@@ -243,7 +253,7 @@ export const VOLUNTEER_CONFIG = {
     { field: 'startDate', label: 'Başlangıç', width: '15%' }
   ],
 
-  getDisplayName: (item) => item.personName || item.personFullName || `Gönüllü #${item.id}`
+  getDisplayName: (item) => item.personName || `Gönüllü #${item.id}`
 };
 
 export const FACILITY_CONFIG = {
