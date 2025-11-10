@@ -235,7 +235,7 @@ export default function EntityManagement({
             } else if (field.entityEndpoint) {
               // Load from entity API
               // Dropdown için tüm kayıtları çek (size=1000 ile pagination'ı aş)
-              const url = `${API_BASE_URL}/${field.entityEndpoint}?all=true&size=1000`
+              const url = `${getApiBaseUrl()}/${field.entityEndpoint}?all=true&size=1000`
               console.log(`Loading entity from: ${url}`)
               const response = await fetch(url)
               console.log(`Entity response status: ${response.status}`)
@@ -550,6 +550,15 @@ export default function EntityManagement({
       case 'select':
         // Entity endpoint veya dictionary'den gelen data
         const options = dictionaries[field.name] || []
+        
+        console.log(`🔍 Select field "${field.name}":`, {
+          hasOptions: options.length > 0,
+          optionsCount: options.length,
+          dictionary: field.dictionary,
+          entityEndpoint: field.entityEndpoint,
+          availableDictionaries: Object.keys(dictionaries),
+          sampleOptions: options.slice(0, 2)
+        })
         
         if (field.dictionary || field.entityEndpoint) {
           return (
