@@ -265,3 +265,139 @@ export async function searchAnimals(params = {}) {
   }
 }
 
+/**
+ * Get all photos for an animal
+ * @param {string} animalId - Animal ID
+ */
+export async function getAnimalPhotos(animalId) {
+  try {
+    console.log('Fetching photos for animal:', animalId);
+    const response = await fetch(`${API_BASE_URL}/animals/${animalId}/photos`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log(`Fetched ${data.length} photos for animal ${animalId}`);
+    return data;
+  } catch (error) {
+    console.error('Error fetching animal photos:', error, error.stack);
+    throw error;
+  }
+}
+
+/**
+ * Upload a photo for an animal (base64 encoded)
+ * @param {string} animalId - Animal ID
+ * @param {Object} photoData - Photo data
+ * @param {string} photoData.imageBase64 - Base64 encoded image data
+ * @param {string} photoData.description - Optional photo description
+ */
+export async function uploadAnimalPhoto(animalId, photoData) {
+  try {
+    console.log('Uploading photo for animal:', animalId);
+    const response = await fetch(`${API_BASE_URL}/animals/${animalId}/photos`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(photoData)
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error response body:', errorText);
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log('Photo uploaded successfully:', data);
+    return data;
+  } catch (error) {
+    console.error('Error uploading photo:', error, error.stack);
+    throw error;
+  }
+}
+
+/**
+ * Delete a photo
+ * @param {string} animalId - Animal ID
+ * @param {string} photoId - Photo ID
+ */
+export async function deleteAnimalPhoto(animalId, photoId) {
+  try {
+    console.log('Deleting photo:', photoId, 'for animal:', animalId);
+    const response = await fetch(`${API_BASE_URL}/animals/${animalId}/photos/${photoId}`, {
+      method: 'DELETE'
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error response body:', errorText);
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    console.log('Photo deleted successfully');
+    return true;
+  } catch (error) {
+    console.error('Error deleting photo:', error, error.stack);
+    throw error;
+  }
+}
+
+/**
+ * Set a photo as primary (main photo)
+ * @param {string} animalId - Animal ID
+ * @param {string} photoId - Photo ID
+ */
+export async function setAnimalPhotoPrimary(animalId, photoId) {
+  try {
+    console.log('Setting photo as primary:', photoId, 'for animal:', animalId);
+    const response = await fetch(`${API_BASE_URL}/animals/${animalId}/photos/${photoId}/set-primary`, {
+      method: 'PATCH'
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error response body:', errorText);
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log('Photo set as primary successfully:', data);
+    return data;
+  } catch (error) {
+    console.error('Error setting photo as primary:', error, error.stack);
+    throw error;
+  }
+}
+
+/**
+ * Reorder a photo
+ * @param {string} animalId - Animal ID
+ * @param {string} photoId - Photo ID
+ * @param {number} order - New order/position
+ */
+export async function reorderAnimalPhoto(animalId, photoId, order) {
+  try {
+    console.log('Reordering photo:', photoId, 'to position:', order);
+    const response = await fetch(`${API_BASE_URL}/animals/${animalId}/photos/${photoId}/order?order=${order}`, {
+      method: 'PATCH'
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error response body:', errorText);
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    console.log('Photo reordered successfully:', data);
+    return data;
+  } catch (error) {
+    console.error('Error reordering photo:', error, error.stack);
+    throw error;
+  }
+}
+

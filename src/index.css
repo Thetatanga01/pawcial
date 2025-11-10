@@ -3494,3 +3494,269 @@ body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto
   scrollbar-width: thin;
   scrollbar-color: var(--bg-hover) var(--bg-secondary);
 }
+
+/* ===================================
+   Photo Management Modal Styles
+   =================================== */
+
+.photo-modal-container {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 1200px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.photo-modal-upload-section {
+  padding: 20px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  background: #f9fafb;
+}
+
+.photo-upload-hint {
+  margin: 0;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.photo-gallery {
+  padding: 30px 20px;
+  min-height: 300px;
+}
+
+.photo-loading,
+.photo-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  color: #6b7280;
+}
+
+.photo-empty-hint {
+  font-size: 14px;
+  margin-top: 8px;
+  color: #9ca3af;
+}
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.photo-card {
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  background: white;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  position: relative;
+}
+
+.photo-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+}
+
+.photo-primary-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: #fbbf24;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 2;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.photo-image-container {
+  width: 100%;
+  height: 240px;
+  background: #f3f4f6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.photo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.photo-actions {
+  padding: 12px;
+  background: #f9fafb;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.photo-order-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.photo-order-number {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  min-width: 40px;
+  text-align: center;
+}
+
+.photo-main-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.photo-action-btn {
+  padding: 6px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.photo-action-btn:hover:not(:disabled) {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+  transform: translateY(-1px);
+}
+
+.photo-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.photo-set-primary {
+  color: #f59e0b;
+  border-color: #fbbf24;
+}
+
+.photo-set-primary:hover {
+  background: #fffbeb;
+  border-color: #f59e0b;
+}
+
+.photo-delete {
+  color: #ef4444;
+  border-color: #fca5a5;
+}
+
+.photo-delete:hover {
+  background: #fef2f2;
+  border-color: #ef4444;
+}
+
+.photo-description {
+  padding: 12px;
+  font-size: 13px;
+  color: #6b7280;
+  border-top: 1px solid #e5e7eb;
+  background: white;
+}
+
+/* Dark Mode Styles for Photo Management */
+.admin-dark-mode .photo-modal-container {
+  background: var(--bg-primary) !important;
+  border: 1px solid var(--border-color);
+}
+
+.admin-dark-mode .photo-modal-upload-section {
+  background: var(--bg-secondary) !important;
+  border-bottom-color: var(--border-color) !important;
+}
+
+.admin-dark-mode .photo-upload-hint {
+  color: var(--text-muted) !important;
+}
+
+.admin-dark-mode .photo-gallery {
+  background: var(--bg-primary) !important;
+}
+
+.admin-dark-mode .photo-loading,
+.admin-dark-mode .photo-empty {
+  color: var(--text-secondary) !important;
+}
+
+.admin-dark-mode .photo-empty-hint {
+  color: var(--text-muted) !important;
+}
+
+.admin-dark-mode .photo-card {
+  background: var(--bg-secondary) !important;
+  border-color: var(--border-color) !important;
+}
+
+.admin-dark-mode .photo-card:hover {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3) !important;
+}
+
+.admin-dark-mode .photo-image-container {
+  background: var(--bg-tertiary) !important;
+}
+
+.admin-dark-mode .photo-actions {
+  background: var(--bg-tertiary) !important;
+}
+
+.admin-dark-mode .photo-order-number {
+  color: var(--text-primary) !important;
+}
+
+.admin-dark-mode .photo-action-btn {
+  background: var(--bg-primary) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-primary) !important;
+}
+
+.admin-dark-mode .photo-action-btn:hover:not(:disabled) {
+  background: var(--bg-hover) !important;
+  border-color: var(--border-hover) !important;
+}
+
+.admin-dark-mode .photo-set-primary {
+  color: #fbbf24 !important;
+  border-color: #f59e0b !important;
+}
+
+.admin-dark-mode .photo-set-primary:hover {
+  background: rgba(251, 191, 36, 0.1) !important;
+}
+
+.admin-dark-mode .photo-delete {
+  color: #f87171 !important;
+  border-color: #ef4444 !important;
+}
+
+.admin-dark-mode .photo-delete:hover {
+  background: rgba(239, 68, 68, 0.1) !important;
+}
+
+.admin-dark-mode .photo-description {
+  background: var(--bg-secondary) !important;
+  border-top-color: var(--border-color) !important;
+  color: var(--text-secondary) !important;
+}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { getAnimals, createAnimal, updateAnimal, deleteAnimal, hardDeleteAnimal, searchAnimals } from '../api/animals.js'
+import { getAnimals, createAnimal, updateAnimal, deleteAnimal, hardDeleteAnimal, searchAnimals, getAnimalPhotos, uploadAnimalPhoto, deleteAnimalPhoto, setAnimalPhotoPrimary, reorderAnimalPhoto } from '../api/animals.js'
 import { getDictionaryItems } from '../api/dictionary.js'
 import { createApiHelpers } from '../api/genericApi.js'
 import { getUserFriendlyErrorMessage, NOTIFICATION_DURATION, ERROR_NOTIFICATION_DURATION } from '../utils/errorHandler.js'
@@ -24,6 +24,14 @@ export default function AnimalManagement() {
   const [notification, setNotification] = useState(null)
   const [confirmModal, setConfirmModal] = useState(null) // { title, message, onConfirm, confirmText, type, isActive }
   const [hardDeleteWindowSeconds, setHardDeleteWindowSeconds] = useState(300) // System parameter for hard delete
+  
+  // Photo management states
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false)
+  const [selectedAnimalForPhotos, setSelectedAnimalForPhotos] = useState(null)
+  const [photos, setPhotos] = useState([])
+  const [photosLoading, setPhotosLoading] = useState(false)
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const fileInputRef = useRef(null)
   
   // Animal Events states
   const [events, setEvents] = useState([])
@@ -476,6 +484,130 @@ export default function AnimalManagement() {
     setViewMode('events')
     loadAnimalEvents(animal.id)
     loadEventDictionaries()
+  }
+
+  // Photo Management Functions
+  const handleViewPhotos = async (animal) => {
+    setSelectedAnimalForPhotos(animal)
+    setIsPhotoModalOpen(true)
+    await loadPhotos(animal.id)
+  }
+
+  const loadPhotos = async (animalId) => {
+    setPhotosLoading(true)
+    try {
+      const photoData = await getAnimalPhotos(animalId)
+      // Sort by photoOrder
+      const sortedPhotos = photoData.sort((a, b) => (a.photoOrder || 0) - (b.photoOrder || 0))
+      setPhotos(sortedPhotos)
+    } catch (error) {
+      console.error('Error loading photos:', error)
+      showNotification(getUserFriendlyErrorMessage(error, 'Fotoğraflar yüklenirken hata oluştu'), 'error')
+      setPhotos([])
+    } finally {
+      setPhotosLoading(false)
+    }
+  }
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      showNotification('Lütfen sadece resim dosyası seçiniz', 'error')
+      return
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      showNotification('Dosya boyutu 5MB\'dan küçük olmalıdır', 'error')
+      return
+    }
+
+    setUploadingPhoto(true)
+    try {
+      // Convert to base64
+      const reader = new FileReader()
+      reader.onloadend = async () => {
+        try {
+          const base64Data = reader.result.split(',')[1] // Remove data:image/...;base64, prefix
+          
+          await uploadAnimalPhoto(selectedAnimalForPhotos.id, {
+            imageBase64: base64Data,
+            description: file.name
+          })
+          
+          showNotification('Fotoğraf başarıyla yüklendi!', 'success')
+          await loadPhotos(selectedAnimalForPhotos.id)
+          
+          // Reset file input
+          if (fileInputRef.current) {
+            fileInputRef.current.value = ''
+          }
+        } catch (error) {
+          console.error('Error uploading photo:', error)
+          showNotification(getUserFriendlyErrorMessage(error, 'Fotoğraf yüklenirken hata oluştu'), 'error')
+        } finally {
+          setUploadingPhoto(false)
+        }
+      }
+      reader.onerror = () => {
+        showNotification('Dosya okunamadı', 'error')
+        setUploadingPhoto(false)
+      }
+      reader.readAsDataURL(file)
+    } catch (error) {
+      console.error('Error processing file:', error)
+      showNotification('Dosya işlenirken hata oluştu', 'error')
+      setUploadingPhoto(false)
+    }
+  }
+
+  const handleDeletePhoto = async (photoId) => {
+    if (!window.confirm('Bu fotoğrafı silmek istediğinizden emin misiniz?')) {
+      return
+    }
+
+    try {
+      await deleteAnimalPhoto(selectedAnimalForPhotos.id, photoId)
+      showNotification('Fotoğraf başarıyla silindi!', 'success')
+      await loadPhotos(selectedAnimalForPhotos.id)
+    } catch (error) {
+      console.error('Error deleting photo:', error)
+      showNotification(getUserFriendlyErrorMessage(error, 'Fotoğraf silinirken hata oluştu'), 'error')
+    }
+  }
+
+  const handleSetPrimaryPhoto = async (photoId) => {
+    try {
+      await setAnimalPhotoPrimary(selectedAnimalForPhotos.id, photoId)
+      showNotification('Ana fotoğraf başarıyla ayarlandı!', 'success')
+      await loadPhotos(selectedAnimalForPhotos.id)
+    } catch (error) {
+      console.error('Error setting primary photo:', error)
+      showNotification(getUserFriendlyErrorMessage(error, 'Ana fotoğraf ayarlanırken hata oluştu'), 'error')
+    }
+  }
+
+  const handleReorderPhoto = async (photoId, newOrder) => {
+    try {
+      await reorderAnimalPhoto(selectedAnimalForPhotos.id, photoId, newOrder)
+      await loadPhotos(selectedAnimalForPhotos.id)
+    } catch (error) {
+      console.error('Error reordering photo:', error)
+      showNotification(getUserFriendlyErrorMessage(error, 'Fotoğraf sıralaması değiştirilemedi'), 'error')
+    }
+  }
+
+  const handleMovePhotoUp = (photo) => {
+    if (photo.photoOrder > 0) {
+      handleReorderPhoto(photo.id, photo.photoOrder - 1)
+    }
+  }
+
+  const handleMovePhotoDown = (photo) => {
+    handleReorderPhoto(photo.id, photo.photoOrder + 1)
   }
 
   // Load animal events
@@ -1717,6 +1849,16 @@ export default function AnimalManagement() {
                         <td onClick={(e) => e.stopPropagation()}>
                           <div className="action-buttons">
                             <button
+                              className="action-btn view"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleViewPhotos(animal)
+                              }}
+                              title="Fotoğraflar"
+                            >
+                              📷
+                            </button>
+                            <button
                               className="action-btn edit"
                               onClick={(e) => {
                                 e.stopPropagation()
@@ -2194,6 +2336,114 @@ export default function AnimalManagement() {
               >
                 {confirmModal.confirmText}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Photo Management Modal */}
+      {isPhotoModalOpen && selectedAnimalForPhotos && (
+        <div className="modal-overlay-dict">
+          <div className="photo-modal-container">
+            <div className="modal-dict-header">
+              <h2>📷 {selectedAnimalForPhotos.name} - Fotoğraflar</h2>
+              <button 
+                className="modal-dict-close" 
+                onClick={() => {
+                  setIsPhotoModalOpen(false)
+                  setSelectedAnimalForPhotos(null)
+                  setPhotos([])
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="photo-modal-upload-section">
+              <input 
+                ref={fileInputRef}
+                type="file" 
+                accept="image/*"
+                onChange={handleFileSelect}
+                style={{ display: 'none' }}
+                id="photo-upload-input"
+              />
+              <label htmlFor="photo-upload-input" className="btn btn-primary">
+                {uploadingPhoto ? '⏳ Yükleniyor...' : '+ Fotoğraf Yükle'}
+              </label>
+              <p className="photo-upload-hint">Maksimum dosya boyutu: 5MB</p>
+            </div>
+
+            <div className="photo-gallery">
+              {photosLoading ? (
+                <div className="photo-loading">
+                  <p>Fotoğraflar yükleniyor...</p>
+                </div>
+              ) : photos.length === 0 ? (
+                <div className="photo-empty">
+                  <p>📷 Henüz fotoğraf eklenmemiş</p>
+                  <p className="photo-empty-hint">Yukarıdaki butonu kullanarak fotoğraf ekleyebilirsiniz</p>
+                </div>
+              ) : (
+                <div className="photo-grid">
+                  {photos.map((photo, index) => (
+                    <div key={photo.id} className="photo-card">
+                      {photo.isPrimary && (
+                        <div className="photo-primary-badge">⭐ Ana Fotoğraf</div>
+                      )}
+                      <div className="photo-image-container">
+                        <img 
+                          src={photo.photoUrl}
+                          alt={photo.description || `Fotoğraf ${index + 1}`}
+                          className="photo-image"
+                        />
+                      </div>
+                      <div className="photo-actions">
+                        <div className="photo-order-controls">
+                          <button
+                            className="photo-action-btn"
+                            onClick={() => handleMovePhotoUp(photo)}
+                            disabled={index === 0}
+                            title="Yukarı Taşı"
+                          >
+                            ⬆️
+                          </button>
+                          <span className="photo-order-number">#{photo.photoOrder}</span>
+                          <button
+                            className="photo-action-btn"
+                            onClick={() => handleMovePhotoDown(photo)}
+                            disabled={index === photos.length - 1}
+                            title="Aşağı Taşı"
+                          >
+                            ⬇️
+                          </button>
+                        </div>
+                        <div className="photo-main-actions">
+                          {!photo.isPrimary && (
+                            <button
+                              className="photo-action-btn photo-set-primary"
+                              onClick={() => handleSetPrimaryPhoto(photo.id)}
+                              title="Ana Fotoğraf Yap"
+                            >
+                              ⭐ Ana Yap
+                            </button>
+                          )}
+                          <button
+                            className="photo-action-btn photo-delete"
+                            onClick={() => handleDeletePhoto(photo.id)}
+                            title="Sil"
+                          >
+                            🗑️ Sil
+                          </button>
+                        </div>
+                      </div>
+                      {photo.description && (
+                        <div className="photo-description">{photo.description}</div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
