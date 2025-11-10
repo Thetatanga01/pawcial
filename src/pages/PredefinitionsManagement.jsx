@@ -23,6 +23,7 @@ const DICTIONARIES = [
   { id: 'facility-type', name: 'FacilityType', label: 'Tesis Tipi', icon: '🏢', type: 'dictionary' },
   { id: 'health-flag', name: 'HealthFlag', label: 'Sağlık Durumu', icon: '🏥', type: 'dictionary' },
   { id: 'hold-type', name: 'HoldType', label: 'Bekleme Tipi', icon: '⏸️', type: 'dictionary' },
+  { id: 'leash-behavior', name: 'LeashBehavior', label: 'Tasma Davranışı', icon: '🦮', type: 'dictionary' },
   { id: 'med-event-type', name: 'MedEventType', label: 'Tıbbi Olay Tipi', icon: '🩺', type: 'dictionary' },
   { id: 'observation-category', name: 'ObservationCategory', label: 'Gözlem Kategorisi', icon: '👁️', type: 'dictionary' },
   { id: 'organization', name: 'Organization', label: 'Organizasyon', icon: '🏛️', type: 'dictionary' },

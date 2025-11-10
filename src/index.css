@@ -2971,6 +2971,28 @@ body { margin: 0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto
   border-top: 1px solid var(--border-color);
 }
 
+/* Animal Modal Form - Dark Mode */
+.admin-dark-mode .modal-animal-form {
+  background: var(--bg-secondary);
+}
+
+.admin-dark-mode .form-section {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+}
+
+.admin-dark-mode .form-section-title {
+  color: var(--text-primary) !important;
+}
+
+.admin-dark-mode .form-group-dict label {
+  color: var(--text-primary) !important;
+}
+
+.admin-dark-mode .form-hint-multiselect {
+  color: var(--text-secondary) !important;
+}
+
 .admin-dark-mode .modal-confirm {
   background: var(--bg-secondary);
   color: var(--text-primary);

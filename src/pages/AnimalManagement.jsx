@@ -99,6 +99,7 @@ export default function AnimalManagement() {
   const [sexes, setSexes] = useState([])
   const [temperaments, setTemperaments] = useState([])
   const [healthFlags, setHealthFlags] = useState([])
+  const [leashBehaviors, setLeashBehaviors] = useState([])
 
   // Form data - Backend Swagger'a göre güncellenmiş (DOĞRU FIELD İSİMLERİ)
   const [formData, setFormData] = useState({
@@ -113,8 +114,9 @@ export default function AnimalManagement() {
     sterilized: false,
     isMixed: false,
     originNote: '',
-    temperamentCodes: [],    // Backend'in beklediği field ismi
-    healthFlagCodes: []      // Backend'in beklediği field ismi
+    temperamentCodes: [],    // Backend'in beklediği field ismi (array)
+    healthFlagCodes: [],     // Backend'in beklediği field ismi (array)
+    leashBehavior: ''        // Backend'in beklediği field ismi (tek string - color gibi)
   })
 
   // Notification helper
@@ -294,7 +296,8 @@ export default function AnimalManagement() {
         sizesData,
         sexesData,
         temperamentsData,
-        healthFlagsData
+        healthFlagsData,
+        leashBehaviorsData
       ] = await Promise.all([
         loadSpecies(),
         loadBreeds(),
@@ -302,9 +305,10 @@ export default function AnimalManagement() {
         getDictionaryItems('size').catch(() => []),
         getDictionaryItems('sex').catch(() => []),
         getDictionaryItems('temperament').catch(() => []),
-        getDictionaryItems('health-flag').catch(() => [])
+        getDictionaryItems('health-flag').catch(() => []),
+        getDictionaryItems('leash-behavior').catch(() => [])
       ])
-
+      
       setSpecies(speciesData)
       setAllBreeds(breedsData) // Tüm ırkları saklıyoruz
       setBreeds([]) // Başlangıçta boş
@@ -313,6 +317,7 @@ export default function AnimalManagement() {
       setSexes(sexesData)
       setTemperaments(temperamentsData)
       setHealthFlags(healthFlagsData)
+      setLeashBehaviors(leashBehaviorsData)
     } catch (error) {
       console.error('Error loading dictionaries:', error)
     }
@@ -333,7 +338,8 @@ export default function AnimalManagement() {
       isMixed: false,
       originNote: '',
       temperamentCodes: [],
-      healthFlagCodes: []
+      healthFlagCodes: [],
+      leashBehavior: ''
     })
     setIsModalOpen(true)
   }
@@ -359,8 +365,9 @@ export default function AnimalManagement() {
       sterilized: animal.sterilized || false,
       isMixed: animal.isMixed || false,
       originNote: animal.originNote || '',
-      temperamentCodes: animal.temperaments || [],  // Response'da 'temperaments', form'da 'temperamentCodes'
-      healthFlagCodes: animal.healthFlags || []     // Response'da 'healthFlags', form'da 'healthFlagCodes'
+      temperamentCodes: animal.temperaments || [],  // Response'da 'temperaments', form'da 'temperamentCodes' (array)
+      healthFlagCodes: animal.healthFlags || [],    // Response'da 'healthFlags', form'da 'healthFlagCodes' (array)
+      leashBehavior: animal.leashBehavior || ''     // Response'da 'leashBehavior', form'da 'leashBehavior' (string - color gibi)
     }
     
     console.log('Form values after mapping:', formValues)
@@ -2111,6 +2118,24 @@ export default function AnimalManagement() {
                     <small className="form-hint-multiselect">
                       💡 Birden fazla seçim için Ctrl/Cmd tuşuna basılı tutun
                     </small>
+                  </div>
+
+                  {/* Tasma Davranışı - Tek Seçim (Color gibi) */}
+                  <div className="form-group-dict">
+                    <label htmlFor="leashBehavior">🦮 Tasma Davranışı</label>
+                    <select
+                      id="leashBehavior"
+                      value={formData.leashBehavior}
+                      onChange={(e) => setFormData({ ...formData, leashBehavior: e.target.value })}
+                      className="form-input-dict"
+                    >
+                      <option value="">Seçiniz</option>
+                      {leashBehaviors.map((item) => (
+                        <option key={item.code} value={item.code}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>

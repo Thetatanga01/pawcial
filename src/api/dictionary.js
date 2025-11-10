@@ -13,6 +13,7 @@ const DICTIONARY_ENDPOINTS = {
   'event-type': 'event-types',
   'facility-type': 'facility-types',
   'health-flag': 'health-flags',
+  'leash-behavior': 'leash-behaviors',
   'hold-type': 'hold-types',
   'med-event-type': 'med-event-types',
   'observation-category': 'observation-categories',
