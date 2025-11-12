@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CORS Test - Pawcial</title>
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            overflow-x: auto;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        h1 { color: #333; }
+        h2 { color: #666; margin-top: 0; }
+        .token-display {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            word-break: break-all;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔐 Keycloak + CORS Test Tool</h1>
+    
+    <div class="test-section">
+        <h2>1. Token Kontrolü</h2>
+        <button onclick="checkToken()">Token Kontrol Et</button>
+        <div id="token-result" class="result info" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Backend Bağlantı Testi (Token Olmadan)</h2>
+        <p>CORS ayarlarının temel çalışıp çalışmadığını test eder</p>
+        <button onclick="testBasicConnection()">Test Et (No Auth)</button>
+        <div id="basic-result" class="result" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Keycloak Token ile Test</h2>
+        <p>Authorization header ile istek gönderir (asıl test)</p>
+        <button onclick="testWithToken()">Test Et (With Token)</button>
+        <div id="token-test-result" class="result" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Preflight (OPTIONS) Request Testi</h2>
+        <p>Browser'ın CORS preflight request'ini simüle eder</p>
+        <button onclick="testPreflight()">Test Et (OPTIONS)</button>
+        <div id="preflight-result" class="result" style="display: none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>5. Network Tab Rehberi</h2>
+        <div class="info result">
+Browser Developer Tools'da (F12) Network tab'ını açın.
+Admin paneline gidin ve şu istekleri inceleyin:
+
+✅ BAŞARILI REQUEST:
+┌─────────────────────────────────────────────┐
+│ OPTIONS http://localhost:8000/temperaments  │
+│ Status: 200 OK (veya 204 No Content)        │
+│                                             │
+│ Response Headers:                           │
+│   Access-Control-Allow-Origin: *            │
+│   Access-Control-Allow-Methods: GET,POST... │
+│   Access-Control-Allow-Headers: auth...     │
+└─────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────┐
+│ GET http://localhost:8000/temperaments      │
+│ Status: 200 OK                              │
+│                                             │
+│ Request Headers:                            │
+│   Authorization: Bearer eyJhbGc...          │
+│   Content-Type: application/json            │
+└─────────────────────────────────────────────┘
+
+❌ BAŞARISIZ REQUEST (CORS hatası):
+┌─────────────────────────────────────────────┐
+│ OPTIONS http://localhost:8000/temperaments  │
+│ Status: (failed) net::ERR_FAILED           │
+│                                             │
+│ Console'da:                                 │
+│   "has been blocked by CORS policy"         │
+└─────────────────────────────────────────────┘
+
+ÇÖZÜM: Backend'de CORS ayarlarını yapın!
+        </div>
+    </div>
+
+    <script>
+        const BACKEND_URL = 'http://localhost:8000';
+
+        function checkToken() {
+            const resultDiv = document.getElementById('token-result');
+            resultDiv.style.display = 'block';
+            
+            const token = localStorage.getItem('keycloak-token');
+            
+            if (token) {
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `✅ Token bulundu!\n\nToken (ilk 100 karakter):\n${token.substring(0, 100)}...\n\nToken uzunluğu: ${token.length} karakter`;
+            } else {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Token bulunamadı!\n\nÖnce Keycloak ile giriş yapmanız gerekiyor.\nhttp://localhost:5173/login adresinden giriş yapın.';
+            }
+        }
+
+        async function testBasicConnection() {
+            const resultDiv = document.getElementById('basic-result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.textContent = 'Test ediliyor...';
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/temperaments?size=5`);
+                const data = await response.json();
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `✅ Backend erişilebilir!\n\nStatus: ${response.status}\nData: ${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Bağlantı hatası!\n\nHata: ${error.message}\n\nMuhtemel nedenler:\n1. Backend çalışmıyor (http://localhost:8000)\n2. CORS ayarları yapılmamış\n3. Endpoint yanlış`;
+            }
+        }
+
+        async function testWithToken() {
+            const resultDiv = document.getElementById('token-test-result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.textContent = 'Test ediliyor...';
+
+            const token = localStorage.getItem('keycloak-token');
+            
+            if (!token) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Token bulunamadı!\nÖnce giriş yapmanız gerekiyor.';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/temperaments?size=5`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                const data = await response.json();
+                
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `✅ Token ile istek başarılı!\n\nStatus: ${response.status}\nToken gönderildi: ✅\nData: ${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                
+                if (error.message.includes('CORS') || error.message === 'Failed to fetch') {
+                    resultDiv.textContent = `❌ CORS HATASI!\n\nBackend'de şu ayarlar yapılmalı:\n\napplication.properties:\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\nquarkus.http.cors=true\nquarkus.http.cors.origins=http://localhost:5173\nquarkus.http.cors.methods=GET,POST,PUT,DELETE,PATCH,OPTIONS\nquarkus.http.cors.headers=accept,authorization,content-type,x-requested-with\nquarkus.http.cors.access-control-allow-credentials=true\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n⚠️ Özellikle 'authorization' header'ına izin verilmelidir!`;
+                } else {
+                    resultDiv.textContent = `❌ Hata!\n\n${error.message}`;
+                }
+            }
+        }
+
+        async function testPreflight() {
+            const resultDiv = document.getElementById('preflight-result');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result info';
+            resultDiv.textContent = 'Preflight testi yapılıyor...';
+
+            try {
+                const response = await fetch(`${BACKEND_URL}/temperaments`, {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Access-Control-Request-Method': 'GET',
+                        'Access-Control-Request-Headers': 'authorization,content-type',
+                        'Origin': 'http://localhost:5173'
+                    }
+                });
+
+                const headers = {};
+                response.headers.forEach((value, key) => {
+                    if (key.startsWith('access-control')) {
+                        headers[key] = value;
+                    }
+                });
+
+                resultDiv.className = 'result success';
+                resultDiv.textContent = `✅ Preflight başarılı!\n\nStatus: ${response.status}\n\nCORS Headers:\n${JSON.stringify(headers, null, 2)}`;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = `❌ Preflight başarısız!\n\n${error.message}\n\nBackend OPTIONS methoduna izin vermiyor!\n\napplication.properties'de şu satır olmalı:\nquarkus.http.cors.methods=GET,POST,PUT,DELETE,PATCH,OPTIONS`;
+            }
+        }
+    </script>
+</body>
+</html>
+

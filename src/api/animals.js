@@ -1,6 +1,5 @@
 // API Base URL
-import { getApiBaseUrl } from '../config/apiConfig';
-const API_BASE_URL = getApiBaseUrl();
+import api from './axiosConfig';
 
 /**
  * Get all animals with optional filters and pagination
@@ -11,34 +10,22 @@ const API_BASE_URL = getApiBaseUrl();
  */
 export async function getAnimals(options = {}) {
   try {
-    const params = new URLSearchParams();
+    const params = {};
     
     // Add query parameters if provided
     if (options.all) {
-      params.append('all', 'true');
+      params.all = 'true';
     }
     if (options.page !== undefined) {
-      params.append('page', options.page.toString());
+      params.page = options.page.toString();
     }
     if (options.size !== undefined) {
-      params.append('size', options.size.toString());
+      params.size = options.size.toString();
     }
     
-    const queryString = params.toString();
-    const url = queryString 
-      ? `${API_BASE_URL}/animals?${queryString}`
-      : `${API_BASE_URL}/animals`;
-    
-    console.log('Fetching animals from:', url);
-    const response = await fetch(url);
-    
-    console.log('Response status:', response.status);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const data = await response.json();
+    console.log('Fetching animals with params:', params);
+    const response = await api.get('/animals', { params });
+    const data = response.data;
     console.log('Fetched paginated response:', {
       page: data.page,
       size: data.size,
@@ -59,13 +46,8 @@ export async function getAnimals(options = {}) {
 export async function getAnimal(id) {
   try {
     console.log('Fetching animal:', id);
-    const response = await fetch(`${API_BASE_URL}/animals/${id}`);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const data = await response.json();
+    const response = await api.get(`/animals/${id}`);
+    const data = response.data;
     console.log('Fetched animal:', data);
     return data;
   } catch (error) {
@@ -80,35 +62,10 @@ export async function getAnimal(id) {
 export async function createAnimal(animalData) {
   try {
     console.log('Creating animal with data:', animalData);
-    console.log('POST URL:', `${API_BASE_URL}/animals`);
-    
-    const response = await fetch(`${API_BASE_URL}/animals`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(animalData)
-    });
-    
-    console.log('Response status:', response.status);
-    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Error response body:', errorText);
-      throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
-    }
-    
-    // Check if response has content
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
-      const data = await response.json();
-      console.log('Created animal:', data);
-      return data;
-    } else {
-      console.log('No JSON response body (possibly 204 No Content)');
-      return null;
-    }
+    const response = await api.post('/animals', animalData);
+    const data = response.data;
+    console.log('Created animal:', data);
+    return data;
   } catch (error) {
     console.error('Error creating animal:', error, error.stack);
     throw error;
@@ -121,25 +78,8 @@ export async function createAnimal(animalData) {
 export async function updateAnimal(id, animalData) {
   try {
     console.log('Updating animal:', id, 'with data:', animalData);
-    console.log('PUT URL:', `${API_BASE_URL}/animals/${id}`);
-    
-    const response = await fetch(`${API_BASE_URL}/animals/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(animalData)
-    });
-    
-    console.log('Response status:', response.status);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Error response body:', errorText);
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const data = await response.json();
+    const response = await api.put(`/animals/${id}`, animalData);
+    const data = response.data;
     console.log('Updated animal:', data);
     return data;
   } catch (error) {
@@ -154,20 +94,7 @@ export async function updateAnimal(id, animalData) {
 export async function deleteAnimal(id) {
   try {
     console.log('Deleting animal:', id);
-    console.log('DELETE URL:', `${API_BASE_URL}/animals/${id}`);
-    
-    const response = await fetch(`${API_BASE_URL}/animals/${id}`, {
-      method: 'DELETE'
-    });
-    
-    console.log('Response status:', response.status);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Error response body:', errorText);
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
+    await api.delete(`/animals/${id}`);
     console.log('Animal deleted successfully');
     return true;
   } catch (error) {
@@ -182,20 +109,7 @@ export async function deleteAnimal(id) {
 export async function hardDeleteAnimal(id) {
   try {
     console.log('Hard deleting animal:', id);
-    console.log('HARD DELETE URL:', `${API_BASE_URL}/animals/${id}/hard-delete`);
-    
-    const response = await fetch(`${API_BASE_URL}/animals/${id}/hard-delete`, {
-      method: 'DELETE'
-    });
-    
-    console.log('Response status:', response.status);
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Error response body:', errorText);
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
+    await api.delete(`/animals/${id}/hard-delete`);
     console.log('Animal hard deleted successfully');
     return true;
   } catch (error) {
@@ -216,41 +130,30 @@ export async function hardDeleteAnimal(id) {
  */
 export async function searchAnimals(params = {}) {
   try {
-    const queryParams = new URLSearchParams()
+    const queryParams = {}
     
     if (params.name && params.name.trim()) {
-      queryParams.append('name', params.name.trim())
+      queryParams.name = params.name.trim()
     }
     if (params.speciesName && params.speciesName.trim()) {
-      queryParams.append('speciesName', params.speciesName.trim())
+      queryParams.speciesName = params.speciesName.trim()
     }
     if (params.breedName && params.breedName.trim()) {
-      queryParams.append('breedName', params.breedName.trim())
+      queryParams.breedName = params.breedName.trim()
     }
     if (params.all) {
-      queryParams.append('all', 'true')
+      queryParams.all = 'true'
     }
     if (params.page !== undefined) {
-      queryParams.append('page', params.page.toString())
+      queryParams.page = params.page.toString()
     }
     if (params.size !== undefined) {
-      queryParams.append('size', params.size.toString())
+      queryParams.size = params.size.toString()
     }
     
-    const queryString = queryParams.toString()
-    const url = queryString 
-      ? `${API_BASE_URL}/animals/search?${queryString}`
-      : `${API_BASE_URL}/animals/search`
-    
-    console.log('Searching animals:', url)
-    const response = await fetch(url)
-    
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`Failed to search animals: ${response.status} - ${errorText}`)
-    }
-    
-    const data = await response.json()
+    console.log('Searching animals with params:', queryParams)
+    const response = await api.get('/animals/search', { params: queryParams })
+    const data = response.data
     console.log('Search paginated response:', {
       page: data.page,
       size: data.size,
@@ -272,13 +175,8 @@ export async function searchAnimals(params = {}) {
 export async function getAnimalPhotos(animalId) {
   try {
     console.log('Fetching photos for animal:', animalId);
-    const response = await fetch(`${API_BASE_URL}/animals/${animalId}/photos`);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const data = await response.json();
+    const response = await api.get(`/animals/${animalId}/photos`);
+    const data = response.data;
     console.log(`Fetched ${data.length} photos for animal ${animalId}`);
     return data;
   } catch (error) {
@@ -297,21 +195,8 @@ export async function getAnimalPhotos(animalId) {
 export async function uploadAnimalPhoto(animalId, photoData) {
   try {
     console.log('Uploading photo for animal:', animalId);
-    const response = await fetch(`${API_BASE_URL}/animals/${animalId}/photos`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(photoData)
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Error response body:', errorText);
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const data = await response.json();
+    const response = await api.post(`/animals/${animalId}/photos`, photoData);
+    const data = response.data;
     console.log('Photo uploaded successfully:', data);
     return data;
   } catch (error) {
@@ -328,16 +213,7 @@ export async function uploadAnimalPhoto(animalId, photoData) {
 export async function deleteAnimalPhoto(animalId, photoId) {
   try {
     console.log('Deleting photo:', photoId, 'for animal:', animalId);
-    const response = await fetch(`${API_BASE_URL}/animals/${animalId}/photos/${photoId}`, {
-      method: 'DELETE'
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Error response body:', errorText);
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
+    await api.delete(`/animals/${animalId}/photos/${photoId}`);
     console.log('Photo deleted successfully');
     return true;
   } catch (error) {
@@ -354,17 +230,8 @@ export async function deleteAnimalPhoto(animalId, photoId) {
 export async function setAnimalPhotoPrimary(animalId, photoId) {
   try {
     console.log('Setting photo as primary:', photoId, 'for animal:', animalId);
-    const response = await fetch(`${API_BASE_URL}/animals/${animalId}/photos/${photoId}/set-primary`, {
-      method: 'PATCH'
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Error response body:', errorText);
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const data = await response.json();
+    const response = await api.patch(`/animals/${animalId}/photos/${photoId}/set-primary`);
+    const data = response.data;
     console.log('Photo set as primary successfully:', data);
     return data;
   } catch (error) {
@@ -382,17 +249,10 @@ export async function setAnimalPhotoPrimary(animalId, photoId) {
 export async function reorderAnimalPhoto(animalId, photoId, order) {
   try {
     console.log('Reordering photo:', photoId, 'to position:', order);
-    const response = await fetch(`${API_BASE_URL}/animals/${animalId}/photos/${photoId}/order?order=${order}`, {
-      method: 'PATCH'
+    const response = await api.patch(`/animals/${animalId}/photos/${photoId}/order`, null, {
+      params: { order }
     });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Error response body:', errorText);
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-    
-    const data = await response.json();
+    const data = response.data;
     console.log('Photo reordered successfully:', data);
     return data;
   } catch (error) {

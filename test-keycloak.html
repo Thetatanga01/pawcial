@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Keycloak Test</title>
+</head>
+<body>
+    <h1>Keycloak Connection Test</h1>
+    <div id="result"></div>
+    
+    <script>
+        const keycloakUrl = 'https://keycloak.guven.uk';
+        const realm = 'pawcial';
+        const clientId = 'pawcial-frontend-dev';
+        
+        async function testKeycloak() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p>Testing Keycloak connection...</p>';
+            
+            try {
+                // Test 1: Well-known endpoint
+                const wellKnownUrl = `${keycloakUrl}/realms/${realm}/.well-known/openid-configuration`;
+                console.log('Testing:', wellKnownUrl);
+                
+                const response = await fetch(wellKnownUrl);
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <h2>✅ Connection Successful!</h2>
+                    <pre>${JSON.stringify({
+                        issuer: data.issuer,
+                        authorization_endpoint: data.authorization_endpoint,
+                        token_endpoint: data.token_endpoint,
+                        userinfo_endpoint: data.userinfo_endpoint,
+                        grant_types_supported: data.grant_types_supported
+                    }, null, 2)}</pre>
+                `;
+                
+                console.log('Full response:', data);
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <h2>❌ Connection Failed!</h2>
+                    <p>Error: ${error.message}</p>
+                `;
+                console.error('Error:', error);
+            }
+        }
+        
+        testKeycloak();
+    </script>
+</body>
+</html>
+

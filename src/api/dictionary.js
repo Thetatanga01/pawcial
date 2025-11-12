@@ -1,7 +1,5 @@
 // Dictionary API helper functions
-// Backend endpoint base URL
-import { getApiBaseUrl } from '../config/apiConfig'
-const API_BASE_URL = getApiBaseUrl()
+import api from './axiosConfig';
 
 // Dictionary endpoint mapping (plural forms)
 const DICTIONARY_ENDPOINTS = {
@@ -48,34 +46,21 @@ export async function getDictionaryItems(dictionaryId, showAll = false) {
   }
 
   try {
-    // Dropdown için tüm kayıtları çek (size=1000 ile pagination varsa tümünü al)
-    const params = new URLSearchParams({
-      size: '1000',
-      all: showAll.toString()
-    })
-    const url = `${API_BASE_URL}/${endpoint}?${params}`
-    console.log('Fetching dictionary items:', { dictionaryId, endpoint, url, showAll })
+    console.log('Fetching dictionary items:', { dictionaryId, endpoint, showAll })
     
-    const response = await fetch(url)
-    
-    console.log('Fetch response:', {
-      status: response.status,
-      statusText: response.statusText
+    const response = await api.get(`/${endpoint}`, {
+      params: {
+        size: 1000,
+        all: showAll
+      }
     })
     
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`HTTP error! status: ${response.status}\nDetails: ${errorText}`)
-    }
-    
-    const data = await response.json()
     // Backend response direkt array veya {content: []} olabilir
-    const result = data.content || data
+    const result = response.data.content || response.data
     console.log(`Fetched ${result.length} items from ${dictionaryId}`)
     return result
   } catch (error) {
     console.error(`Error fetching dictionary ${dictionaryId}:`, error)
-    console.error('Error stack:', error.stack)
     throw error
   }
 }
@@ -93,47 +78,13 @@ export async function createDictionaryItem(dictionaryId, data) {
   }
 
   try {
-    // Tüm dictionary'ler için aynı format kullan (label field'ı)
-    const requestData = data
+    console.log('Creating dictionary item:', { dictionaryId, endpoint, data })
     
-    const url = `${API_BASE_URL}/${endpoint}`
-    console.log('Creating dictionary item:', { dictionaryId, endpoint, data: requestData, url })
-    
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestData)
-    })
-    
-    console.log('Create response:', {
-      status: response.status,
-      statusText: response.statusText,
-      headers: Object.fromEntries(response.headers.entries())
-    })
-    
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Create error response:', errorText)
-      throw new Error(`HTTP error! status: ${response.status}\nDetails: ${errorText || 'No error details'}`)
-    }
-    
-    // Backend returns 201 CREATED with the created item
-    // Check if there's a response body
-    const contentType = response.headers.get('content-type')
-    if (contentType && contentType.includes('application/json')) {
-      const result = await response.json()
-      console.log('Create success:', result)
-      return result
-    }
-    
-    // If no JSON response, return the input data with success status
-    console.log('Create success (no response body)')
-    return data
+    const response = await api.post(`/${endpoint}`, data)
+    console.log('Create success:', response.data)
+    return response.data
   } catch (error) {
     console.error(`Error creating dictionary item for ${dictionaryId}:`, error)
-    console.error('Error stack:', error.stack)
     throw error
   }
 }
@@ -152,27 +103,11 @@ export async function toggleDictionaryItem(dictionaryId, code) {
   }
 
   try {
-    const url = `${API_BASE_URL}/${endpoint}/${code}/toggle`
-    console.log('Toggling dictionary item:', { dictionaryId, endpoint, code, url })
-    
-    const response = await fetch(url, {
-      method: 'PATCH'
-    })
-    
-    console.log('Toggle response:', {
-      status: response.status,
-      statusText: response.statusText
-    })
-    
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`HTTP error! status: ${response.status}\nDetails: ${errorText}`)
-    }
-    
+    console.log('Toggling dictionary item:', { dictionaryId, endpoint, code })
+    await api.patch(`/${endpoint}/${code}/toggle`)
     console.log('Toggle success')
   } catch (error) {
     console.error(`Error toggling dictionary item for ${dictionaryId}:`, error)
-    console.error('Error stack:', error.stack)
     throw error
   }
 }
@@ -202,27 +137,11 @@ export async function hardDeleteDictionaryItem(dictionaryId, code) {
   }
 
   try {
-    const url = `${API_BASE_URL}/${endpoint}/${code}/hard-delete`
-    console.log('Hard deleting dictionary item:', { dictionaryId, endpoint, code, url })
-    
-    const response = await fetch(url, {
-      method: 'DELETE'
-    })
-    
-    console.log('Hard delete response:', {
-      status: response.status,
-      statusText: response.statusText
-    })
-    
-    if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`HTTP error! status: ${response.status}\nDetails: ${errorText}`)
-    }
-    
+    console.log('Hard deleting dictionary item:', { dictionaryId, endpoint, code })
+    await api.delete(`/${endpoint}/${code}/hard-delete`)
     console.log('Hard delete success')
   } catch (error) {
     console.error(`Error hard deleting dictionary item for ${dictionaryId}:`, error)
-    console.error('Error stack:', error.stack)
     throw error
   }
 }
@@ -245,43 +164,14 @@ export async function updateDictionaryItem(dictionaryId, code, data) {
     // Tüm dictionary'ler için aynı format kullan (label field'ı)
     const requestData = { label: data.label }
     
-    const url = `${API_BASE_URL}/${endpoint}/${code}`
-    console.log('Updating dictionary item:', { 
-      dictionaryId, 
-      endpoint, 
-      code, 
-      requestData, 
-      url 
-    })
+    console.log('Updating dictionary item:', { dictionaryId, endpoint, code, requestData })
     
-    const response = await fetch(url, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestData)
-    })
+    const response = await api.put(`/${endpoint}/${code}`, requestData)
+    console.log('Update success:', response.data)
     
-    console.log('Update response:', {
-      status: response.status,
-      statusText: response.statusText,
-      headers: Object.fromEntries(response.headers.entries())
-    })
-    
-    if (!response.ok) {
-      const errorText = await response.text()
-      console.error('Update error response:', errorText)
-      throw new Error(`HTTP error! status: ${response.status}\nDetails: ${errorText || 'No error details'}`)
-    }
-    
-    // Backend returns JSON response
-    const result = await response.json()
-    console.log('Update success:', result)
-    
-    return result
+    return response.data
   } catch (error) {
     console.error(`Error updating dictionary item for ${dictionaryId}:`, error)
-    console.error('Error stack:', error.stack)
     throw error
   }
 }

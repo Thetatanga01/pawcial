@@ -1,6 +1,5 @@
 // Generic API helper factory
-import { getApiBaseUrl } from '../config/apiConfig';
-const API_BASE_URL = getApiBaseUrl();
+import api from './axiosConfig';
 
 /**
  * Creates API helpers for a given endpoint
@@ -18,32 +17,22 @@ export function createApiHelpers(endpoint) {
      */
     async getAll(options = {}) {
       try {
-        const params = new URLSearchParams();
+        const params = {};
         
         // Add query parameters if provided
         if (options.all) {
-          params.append('all', 'true');
+          params.all = 'true';
         }
         if (options.page !== undefined) {
-          params.append('page', String(options.page));
+          params.page = String(options.page);
         }
         if (options.size !== undefined) {
-          params.append('size', String(options.size));
+          params.size = String(options.size);
         }
         
-        const queryString = params.toString();
-        const url = queryString 
-          ? `${API_BASE_URL}/${endpoint}?${queryString}`
-          : `${API_BASE_URL}/${endpoint}`;
-        
-        console.log(`Fetching ${endpoint} (paged):`, url);
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
+        console.log(`Fetching ${endpoint} (paged) with params:`, params);
+        const response = await api.get(`/${endpoint}`, { params });
+        const data = response.data;
         
         // Backend'den array mı yoksa paginated response mu geldiğini kontrol et
         if (Array.isArray(data)) {
@@ -86,39 +75,30 @@ export function createApiHelpers(endpoint) {
      */
     async search(params = {}, extra = {}) {
       try {
-        const queryParams = new URLSearchParams();
+        const queryParams = {};
 
         if (params.search && params.search.trim()) {
-          queryParams.append('search', params.search.trim());
+          queryParams.search = params.search.trim();
         }
         if (params.all) {
-          queryParams.append('all', 'true');
+          queryParams.all = 'true';
         }
         if (params.page !== undefined) {
-          queryParams.append('page', String(params.page));
+          queryParams.page = String(params.page);
         }
         if (params.size !== undefined) {
-          queryParams.append('size', String(params.size));
+          queryParams.size = String(params.size);
         }
         // append extra params if provided
         Object.entries(extra || {}).forEach(([key, value]) => {
           if (value !== undefined && value !== null && String(value).trim() !== '') {
-            queryParams.append(key, String(value));
+            queryParams[key] = String(value);
           }
         });
 
-        const queryString = queryParams.toString();
-        const url = queryString
-          ? `${API_BASE_URL}/${endpoint}/search?${queryString}`
-          : `${API_BASE_URL}/${endpoint}/search`;
-
-        console.log(`Searching ${endpoint} (paged):`, url);
-        const response = await fetch(url);
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
-        }
-        const data = await response.json();
+        console.log(`Searching ${endpoint} (paged) with params:`, queryParams);
+        const response = await api.get(`/${endpoint}/search`, { params: queryParams });
+        const data = response.data;
         console.log(`Search ${endpoint} page`, {
           page: data.page,
           size: data.size,
@@ -136,13 +116,8 @@ export function createApiHelpers(endpoint) {
     async getOne(id) {
       try {
         console.log(`Fetching ${endpoint} by id:`, id);
-        const response = await fetch(`${API_BASE_URL}/${endpoint}/${id}`);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
+        const response = await api.get(`/${endpoint}/${id}`);
+        const data = response.data;
         console.log(`Fetched ${endpoint}:`, data);
         return data;
       } catch (error) {
@@ -154,28 +129,10 @@ export function createApiHelpers(endpoint) {
     async create(data) {
       try {
         console.log(`Creating ${endpoint}:`, data);
-        const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(data)
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`);
-        }
-        
-        const contentType = response.headers.get('content-type');
-        if (contentType && contentType.includes('application/json')) {
-          const result = await response.json();
-          console.log(`Created ${endpoint}:`, result);
-          return result;
-        } else {
-          console.log(`${endpoint} created (no JSON response)`);
-          return null;
-        }
+        const response = await api.post(`/${endpoint}`, data);
+        const result = response.data;
+        console.log(`Created ${endpoint}:`, result);
+        return result;
       } catch (error) {
         console.error(`Error creating ${endpoint}:`, error);
         throw error;
@@ -185,20 +142,8 @@ export function createApiHelpers(endpoint) {
     async update(id, data) {
       try {
         console.log(`Updating ${endpoint}:`, id, data);
-        const response = await fetch(`${API_BASE_URL}/${endpoint}/${id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(data)
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const result = await response.json();
+        const response = await api.put(`/${endpoint}/${id}`, data);
+        const result = response.data;
         console.log(`Updated ${endpoint}:`, result);
         return result;
       } catch (error) {
@@ -210,15 +155,7 @@ export function createApiHelpers(endpoint) {
     async delete(id) {
       try {
         console.log(`Deleting ${endpoint}:`, id);
-        const response = await fetch(`${API_BASE_URL}/${endpoint}/${id}`, {
-          method: 'DELETE'
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
+        await api.delete(`/${endpoint}/${id}`);
         console.log(`${endpoint} deleted successfully`);
         return true;
       } catch (error) {
@@ -230,15 +167,7 @@ export function createApiHelpers(endpoint) {
     async hardDelete(id) {
       try {
         console.log(`Hard deleting ${endpoint}:`, id);
-        const response = await fetch(`${API_BASE_URL}/${endpoint}/${id}/hard-delete`, {
-          method: 'DELETE'
-        });
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
+        await api.delete(`/${endpoint}/${id}/hard-delete`);
         console.log(`${endpoint} hard deleted successfully`);
         return true;
       } catch (error) {

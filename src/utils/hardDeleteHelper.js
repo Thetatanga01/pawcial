@@ -1,4 +1,5 @@
 // Hard Delete Helper Functions
+import api from '../api/axiosConfig';
 
 /**
  * Checks if hard delete is allowed based on creation time and system parameter
@@ -68,18 +69,10 @@ export function formatRemainingTime(seconds) {
  * Fetches system parameter for hard delete window
  * @returns {Promise<number>} Hard delete window in seconds, defaults to 300
  */
-import { getApiBaseUrl } from '../config/apiConfig';
-
 export async function fetchHardDeleteWindowSeconds() {
   try {
-    const API_BASE_URL = getApiBaseUrl();
-    const response = await fetch(`${API_BASE_URL}/system-parameters`)
-    if (!response.ok) {
-      console.error('Failed to fetch system parameters')
-      return 300 // Default fallback
-    }
-    
-    const params = await response.json()
+    const response = await api.get('/system-parameters')
+    const params = response.data
     const hardDeleteParam = params.find(p => p.code === 'HARD_DELETE_WINDOW_SECONDS')
     
     if (hardDeleteParam && hardDeleteParam.parameterValue) {

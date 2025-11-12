@@ -1,4 +1,6 @@
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
+import { useKeycloak } from './providers/KeycloakProvider.jsx'
+import ProtectedRoute from './components/ProtectedRoute.jsx'
 import Home from './pages/Home.jsx'
 import Pets from './pages/Pets.jsx'
 import PetDetail from './pages/PetDetail.jsx'
@@ -13,6 +15,10 @@ import Admin from './pages/Admin.jsx'
 export default function App() {
   const currentYear = new Date().getFullYear();
   const location = useLocation();
+  const { authenticated, loading, login, logout, userInfo, hasRole } = useKeycloak();
+  
+  // Check if user is admin
+  const isAdmin = authenticated && hasRole('admin');
   
   // Function to determine if a nav item is active
   const isActive = (path) => {
@@ -62,10 +68,68 @@ export default function App() {
             >
               Mağaza
             </Link>
+            
+            {/* Admin sekmesi - sadece admin rolü olan kullanıcılar için */}
+            {isAdmin && (
+              <Link 
+                to="/admin" 
+                className={isActive('/admin') ? 'active' : ''}
+                style={{ color: '#ff6b6b' }}
+              >
+                ⚙️ Admin
+              </Link>
+            )}
           </nav>
               <div className="actions">
-                <Link className="link" to="/login">Giriş</Link>
-                <button className="avatar" aria-label="Profil"></button>
+                {loading ? (
+                  <span>Yükleniyor...</span>
+                ) : authenticated ? (
+                  <>
+                    <span className="link" style={{ marginRight: '1rem' }}>
+                      Hoş geldin, {userInfo?.preferred_username || userInfo?.name || 'Kullanıcı'}
+                      {isAdmin && (
+                        <span style={{ 
+                          marginLeft: '0.5rem', 
+                          padding: '0.15rem 0.5rem',
+                          background: '#ff6b6b',
+                          color: 'white',
+                          borderRadius: '4px',
+                          fontSize: '0.75rem',
+                          fontWeight: 'bold'
+                        }}>
+                          ADMIN
+                        </span>
+                      )}
+                    </span>
+                    <button 
+                      className="link" 
+                      onClick={logout}
+                      style={{ 
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        color: 'inherit',
+                        font: 'inherit'
+                      }}
+                    >
+                      Çıkış
+                    </button>
+                  </>
+                ) : (
+                  <button 
+                    className="link" 
+                    onClick={login}
+                    style={{ 
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: 'inherit',
+                      font: 'inherit'
+                    }}
+                  >
+                    Giriş
+                  </button>
+                )}
               </div>
         </div>
       </header>}
@@ -74,12 +138,30 @@ export default function App() {
             <Route path="/pets" element={<Pets />} />
             <Route path="/pets/:id" element={<PetDetail />} />
             <Route path="/videos/:id" element={<VideoDetail />} />
-            <Route path="/adopt/:id" element={<Adopt />} />
             <Route path="/training" element={<Training />} />
             <Route path="/events" element={<Events />} />
             <Route path="/events/:id" element={<EventDetail />} />
             <Route path="/login" element={<Login />} />
-            <Route path="/admin" element={<Admin />} />
+            
+            {/* Protected Routes - Giriş yapmış kullanıcılar için */}
+            <Route 
+              path="/adopt/:id" 
+              element={
+                <ProtectedRoute>
+                  <Adopt />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Admin Routes - Sadece admin rolüne sahip kullanıcılar için */}
+            <Route 
+              path="/admin" 
+              element={
+                <ProtectedRoute roles={['admin']}>
+                  <Admin />
+                </ProtectedRoute>
+              } 
+            />
           </Routes>
 
       {!isAdminPage && <footer className="site-footer">
