@@ -3,7 +3,7 @@ import Keycloak from 'keycloak-js';
 // Keycloak configuration
 const keycloakConfig = {
   url: import.meta.env.VITE_KEYCLOAK_URL || 'https://keycloak.guven.uk',
-  realm: import.meta.env.VITE_KEYCLOAK_REALM || 'pawcial',
+  realm: import.meta.env.VITE_KEYCLOAK_REALM || 'pawcial-dev',
   clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || 'pawcial-frontend-dev',
 };
 

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Routes, Route, Link, useLocation } from 'react-router-dom'
 import { useKeycloak } from './providers/KeycloakProvider.jsx'
 import ProtectedRoute from './components/ProtectedRoute.jsx'
@@ -16,9 +17,15 @@ export default function App() {
   const currentYear = new Date().getFullYear();
   const location = useLocation();
   const { authenticated, loading, login, logout, userInfo, hasRole } = useKeycloak();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   
   // Check if user is admin
   const isAdmin = authenticated && hasRole('admin');
+  
+  const handleLogout = () => {
+    setShowLogoutModal(false);
+    logout();
+  };
   
   // Function to determine if a nav item is active
   const isActive = (path) => {
@@ -68,53 +75,45 @@ export default function App() {
             >
               Mağaza
             </Link>
-            
-            {/* Admin sekmesi - sadece admin rolü olan kullanıcılar için */}
-            {isAdmin && (
-              <Link 
-                to="/admin" 
-                className={isActive('/admin') ? 'active' : ''}
-                style={{ color: '#ff6b6b' }}
-              >
-                ⚙️ Admin
-              </Link>
-            )}
           </nav>
               <div className="actions">
                 {loading ? (
                   <span>Yükleniyor...</span>
                 ) : authenticated ? (
-                  <>
-                    <span className="link" style={{ marginRight: '1rem' }}>
-                      Hoş geldin, {userInfo?.preferred_username || userInfo?.name || 'Kullanıcı'}
-                      {isAdmin && (
-                        <span style={{ 
-                          marginLeft: '0.5rem', 
-                          padding: '0.15rem 0.5rem',
-                          background: '#ff6b6b',
-                          color: 'white',
-                          borderRadius: '4px',
-                          fontSize: '0.75rem',
-                          fontWeight: 'bold'
-                        }}>
-                          ADMIN
-                        </span>
-                      )}
-                    </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.25rem' }}>
+                    {isAdmin ? (
+                      <Link 
+                        to="/admin" 
+                        className="link"
+                        style={{ 
+                          cursor: 'pointer',
+                          textDecoration: 'none',
+                          color: 'inherit'
+                        }}
+                      >
+                        {userInfo?.name || userInfo?.preferred_username || userInfo?.email || 'Kullanıcı'}
+                      </Link>
+                    ) : (
+                      <span className="link">
+                        {userInfo?.name || userInfo?.preferred_username || userInfo?.email || 'Kullanıcı'}
+                      </span>
+                    )}
                     <button 
                       className="link" 
-                      onClick={logout}
+                      onClick={() => setShowLogoutModal(true)}
                       style={{ 
                         background: 'none',
                         border: 'none',
                         cursor: 'pointer',
                         color: 'inherit',
-                        font: 'inherit'
+                        font: 'inherit',
+                        fontSize: '0.875rem',
+                        opacity: 0.7
                       }}
                     >
                       Çıkış
                     </button>
-                  </>
+                  </div>
                 ) : (
                   <button 
                     className="link" 
@@ -173,6 +172,98 @@ export default function App() {
           <nav className="footer-nav"><a href="#">Hakkımızda</a><a href="#">Gizlilik Politikası</a><a href="#">Hizmet Şartları</a></nav>
         </div>
       </footer>}
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            backdropFilter: 'blur(4px)'
+          }}
+          onClick={() => setShowLogoutModal(false)}
+        >
+          <div 
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '12px',
+              padding: '2rem',
+              maxWidth: '400px',
+              width: '90%',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)',
+              animation: 'slideUp 0.2s ease-out'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ 
+              margin: '0 0 1rem 0', 
+              fontSize: '1.25rem',
+              fontWeight: '600',
+              color: '#333'
+            }}>
+              Çıkış Yap
+            </h3>
+            <p style={{ 
+              margin: '0 0 1.5rem 0',
+              color: '#666',
+              fontSize: '0.95rem',
+              lineHeight: '1.5'
+            }}>
+              Uygulamadan çıkış yapmak istediğinizden emin misiniz?
+            </p>
+            <div style={{ 
+              display: 'flex', 
+              gap: '0.75rem',
+              justifyContent: 'flex-end'
+            }}>
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                style={{
+                  padding: '0.625rem 1.25rem',
+                  border: '1px solid #ddd',
+                  borderRadius: '8px',
+                  background: 'white',
+                  color: '#333',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => e.target.style.background = '#f5f5f5'}
+                onMouseLeave={(e) => e.target.style.background = 'white'}
+              >
+                İptal
+              </button>
+              <button
+                onClick={handleLogout}
+                style={{
+                  padding: '0.625rem 1.25rem',
+                  border: 'none',
+                  borderRadius: '8px',
+                  background: '#ff6b6b',
+                  color: 'white',
+                  cursor: 'pointer',
+                  fontSize: '0.9rem',
+                  fontWeight: '500',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => e.target.style.background = '#ff5252'}
+                onMouseLeave={(e) => e.target.style.background = '#ff6b6b'}
+              >
+                Çıkış Yap
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
